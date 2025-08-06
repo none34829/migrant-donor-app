@@ -1,50 +1,203 @@
-# Welcome to your Expo app 👋
+# Migrant Donor App
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+A cross-platform mobile application that connects donors and migrant workers, built with React Native and Expo.
 
-## Get started
+## Features
 
-1. Install dependencies
+- **Authentication**: Email/password login and signup using Firebase Auth
+- **Donation Management**: Add, browse, and search donations with images
+- **Categories**: Browse donations by category (Electronics, Furniture, Clothing, etc.)
+- **User Profiles**: View and edit profile information with anonymous option
+- **Image Upload**: Upload images for donations using Firebase Storage
+- **Real-time Data**: All data stored in Firebase Firestore
 
-   ```bash
-   npm install
-   ```
+## Tech Stack
 
-2. Start the app
+- **Frontend**: React Native + Expo
+- **Backend**: Firebase (Auth, Firestore, Storage)
+- **Navigation**: React Navigation
+- **Image Picker**: Expo Image Picker
 
-   ```bash
-   npx expo start
-   ```
+## Prerequisites
 
-In the output, you'll find options to open the app in a
+- Node.js (v14 or higher)
+- npm or yarn
+- Expo CLI
+- Firebase account
 
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
+## Setup Instructions
 
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
-
-## Get a fresh project
-
-When you're ready, run:
+### 1. Clone and Install Dependencies
 
 ```bash
-npm run reset-project
+cd migrant-donor-app
+npm install
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+### 2. Firebase Setup
 
-## Learn more
+1. Go to [Firebase Console](https://console.firebase.google.com/)
+2. Create a new project
+3. Enable the following services:
+   - **Authentication** (Email/Password)
+   - **Firestore Database**
+   - **Storage** (Optional - not required for this version)
 
-To learn more about developing your project with Expo, look at the following resources:
+4. Get your Firebase configuration:
+   - Go to Project Settings
+   - Scroll down to "Your apps"
+   - Click on the web app icon (</>)
+   - Copy the config object
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+5. Update Firebase configuration:
+   - Open `src/config/firebase.js`
+   - Replace the placeholder values with your actual Firebase config
 
-## Join the community
+```javascript
+const firebaseConfig = {
+  apiKey: "YOUR_API_KEY",
+  authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
+  projectId: "YOUR_PROJECT_ID",
+  storageBucket: "YOUR_PROJECT_ID.appspot.com",
+  messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
+  appId: "YOUR_APP_ID",
+};
+```
 
-Join our community of developers creating universal apps.
+### 3. Firestore Security Rules
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+Set up Firestore security rules in your Firebase console:
+
+```javascript
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /users/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+    match /donations/{donationId} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null;
+    }
+  }
+}
+```
+
+### 4. Storage Security Rules (Optional)
+
+If you decide to use Firebase Storage later, set up Storage security rules:
+
+```javascript
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    match /donations/{allPaths=**} {
+      allow read, write: if request.auth != null;
+    }
+  }
+}
+```
+
+### 5. Run the App
+
+```bash
+# Start the development server
+npx expo start
+
+# Run on Android
+npx expo run:android
+
+# Run on iOS (requires macOS)
+npx expo run:ios
+
+# Run on web
+npx expo run:web
+```
+
+## Project Structure
+
+```
+src/
+├── components/
+│   └── DonationCard.js          # Reusable donation card component
+├── screens/
+│   ├── LoginScreen.js           # User login screen
+│   ├── SignupScreen.js          # User registration screen
+│   ├── HomeScreen.js            # Main donation feed
+│   ├── CategoryScreen.js        # Category-based browsing
+│   ├── ProfileScreen.js         # User profile management
+│   └── AddDonationScreen.js     # Add new donations
+├── navigation/
+│   ├── AuthNavigator.js         # Authentication flow navigation
+│   └── AppNavigator.js          # Main app navigation
+└── config/
+    └── firebase.js              # Firebase configuration
+```
+
+## Data Models
+
+### User
+```json
+{
+  "uid": "string",
+  "name": "string",
+  "email": "string",
+  "contact": "string",
+  "address": "string",
+  "anonymous": "boolean",
+  "createdAt": "timestamp"
+}
+```
+
+### Donation
+```json
+{
+  "id": "string",
+  "title": "string",
+  "description": "string",
+  "category": "string",
+  "imageUrl": "string",
+  "donorId": "string",
+  "requestedBy": ["userId1", "userId2"],
+  "createdAt": "timestamp"
+}
+```
+
+## Features in Detail
+
+### Authentication
+- Email/password registration and login
+- Automatic session management
+- Secure logout functionality
+
+### Donation Management
+- Add donations with title, description, category, and image
+- Browse all donations in a feed
+- Search donations by title, description, or category
+- Filter donations by category
+
+### User Profiles
+- View and edit personal information
+- Option to stay anonymous
+- Contact information management
+
+### Image Handling
+- Upload images from device gallery
+- Automatic image compression
+- Base64 storage in Firestore (no external storage required)
+
+## Contributing
+
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Test thoroughly
+5. Submit a pull request
+
+## License
+
+This project is licensed under the MIT License.
+
+## Support
+
+For support, please open an issue in the GitHub repository or contact the development team.
