@@ -1,4 +1,5 @@
-import { collection, getDocs, orderBy, query, where } from 'firebase/firestore';
+import { useFocusEffect } from '@react-navigation/native';
+import { collection, getDocs, query, where } from 'firebase/firestore';
 import React, { useEffect, useState } from 'react';
 import {
     Alert,
@@ -6,6 +7,7 @@ import {
     RefreshControl,
     StyleSheet,
     Text,
+    TouchableOpacity,
     View,
 } from 'react-native';
 import DonationCard from '../components/DonationCard';
@@ -20,22 +22,55 @@ const MyDonationsScreen = ({ navigation }) => {
     fetchMyDonations();
   }, []);
 
+  // Refresh donations when screen comes into focus
+  useFocusEffect(
+    React.useCallback(() => {
+      fetchMyDonations();
+    }, [])
+  );
+
   const fetchMyDonations = async () => {
     try {
-      const q = query(
+      const currentUser = auth.currentUser;
+      console.log('Current user:', currentUser?.uid);
+      
+      if (!currentUser) {
+        console.log('No current user found');
+        setDonations([]);
+        return;
+      }
+
+      console.log('Fetching donations for user:', currentUser.uid);
+      
+      // Now try to fetch user's donations - without orderBy to avoid index requirement
+      let q = query(
         collection(db, 'donations'),
-        where('donorId', '==', auth.currentUser.uid),
-        orderBy('createdAt', 'desc')
+        where('donorId', '==', currentUser.uid)
       );
+      
       const querySnapshot = await getDocs(q);
-      const donationsData = querySnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data(),
-      }));
+      console.log('Query snapshot size:', querySnapshot.size);
+      
+      const donationsData = querySnapshot.docs.map(doc => {
+        const data = doc.data();
+        return {
+          id: doc.id,
+          ...data,
+        };
+      });
+      
+      // Sort manually if we have data
+      donationsData.sort((a, b) => {
+        const dateA = a.createdAt?.toDate ? a.createdAt.toDate() : new Date(a.createdAt);
+        const dateB = b.createdAt?.toDate ? b.createdAt.toDate() : new Date(b.createdAt);
+        return dateB - dateA;
+      });
+      
+      console.log('Total donations found:', donationsData.length);
       setDonations(donationsData);
     } catch (error) {
-      Alert.alert('Error', 'Failed to fetch your donations');
       console.error('Error fetching donations:', error);
+      Alert.alert('Error', 'Failed to fetch your donations: ' + error.message);
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -48,8 +83,7 @@ const MyDonationsScreen = ({ navigation }) => {
   };
 
   const handleDonationPress = (donation) => {
-    // For now, just show an alert
-    Alert.alert('Donation Details', `Title: ${donation.title}\nCategory: ${donation.category}`);
+    navigation.navigate('DonationDetail', { donation });
   };
 
   if (loading) {
@@ -64,7 +98,7 @@ const MyDonationsScreen = ({ navigation }) => {
     <View style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.title}>My Donations</Text>
-        <Text style={styles.subtitle}>Donations you've shared</Text>
+        <Text style={styles.subtitle}>Donations you've shared ({donations.length})</Text>
       </View>
 
       <FlatList
@@ -88,6 +122,12 @@ const MyDonationsScreen = ({ navigation }) => {
             <Text style={styles.emptySubtext}>
               Tap the + button to add your first donation
             </Text>
+            <TouchableOpacity
+              style={styles.addButton}
+              onPress={() => navigation.navigate('Main', { screen: 'Add' })}
+            >
+              <Text style={styles.addButtonText}>Add Donation</Text>
+            </TouchableOpacity>
           </View>
         }
       />
@@ -145,6 +185,18 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#999',
     textAlign: 'center',
+    marginBottom: 24,
+  },
+  addButton: {
+    backgroundColor: '#007AFF',
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 8,
+  },
+  addButtonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: '600',
   },
 });
 

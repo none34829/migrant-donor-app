@@ -86,24 +86,43 @@ const AddDonationScreen = ({ navigation }) => {
 
     setLoading(true);
     try {
+      const currentUser = auth.currentUser;
+      console.log('Current user when adding donation:', currentUser?.uid);
+      console.log('Current user email:', currentUser?.email);
+      
+      if (!currentUser) {
+        Alert.alert('Error', 'Please sign in to add donations');
+        return;
+      }
+
       // Convert image to Base64
       const imageBase64 = await convertImageToBase64(image.uri);
 
-      // Add donation to Firestore
-      await addDoc(collection(db, 'donations'), {
+      const donationData = {
         title: title.trim(),
         description: description.trim(),
         category,
         imageUrl: imageBase64, // Store Base64 string instead of URL
-        donorId: auth.currentUser.uid,
+        donorId: currentUser.uid,
         requestedBy: [],
         createdAt: new Date(),
+      };
+
+      console.log('Saving donation with data:', {
+        title: donationData.title,
+        donorId: donationData.donorId,
+        category: donationData.category
       });
+
+      // Add donation to Firestore
+      const docRef = await addDoc(collection(db, 'donations'), donationData);
+      console.log('Donation saved with ID:', docRef.id);
 
       Alert.alert('Success', 'Donation added successfully!', [
         { text: 'OK', onPress: () => navigation.goBack() },
       ]);
     } catch (error) {
+      console.error('Error adding donation:', error);
       Alert.alert('Error', 'Failed to add donation: ' + error.message);
     } finally {
       setLoading(false);

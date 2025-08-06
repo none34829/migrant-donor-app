@@ -1,4 +1,5 @@
-import React from 'react';
+import { Ionicons } from '@expo/vector-icons';
+import React, { useState } from 'react';
 import {
     Dimensions,
     Image,
@@ -7,17 +8,38 @@ import {
     TouchableOpacity,
     View,
 } from 'react-native';
+import { auth } from '../config/firebase';
 
 const { width } = Dimensions.get('window');
 
-const DonationCard = ({ donation, onPress, onRequest, isRequested = false, isAnonymous = false }) => {
+const DonationCard = ({ donation, onPress, onRequest, isAnonymous = false }) => {
+  const [imageError, setImageError] = useState(false);
+  
+  // Check if current user has requested this item
+  const currentUser = auth.currentUser;
+  const isRequested = donation.requestedBy && currentUser && donation.requestedBy.includes(currentUser.uid);
+  const isOwnDonation = donation.donorId === currentUser?.uid;
+
+  const handleImageError = () => {
+    setImageError(true);
+  };
+
   return (
     <TouchableOpacity style={styles.card} onPress={onPress}>
-      <Image
-        source={{ uri: donation.imageUrl }}
-        style={styles.image}
-        resizeMode="cover"
-      />
+      {!imageError ? (
+        <Image
+          source={{ uri: donation.imageUrl }}
+          style={styles.image}
+          resizeMode="cover"
+          onError={handleImageError}
+        />
+      ) : (
+        <View style={styles.imagePlaceholder}>
+          <Ionicons name="image-outline" size={48} color="#ccc" />
+          <Text style={styles.imagePlaceholderText}>Image not available</Text>
+        </View>
+      )}
+      
       <View style={styles.content}>
         <Text style={styles.title} numberOfLines={2}>
           {donation.title}
@@ -27,7 +49,7 @@ const DonationCard = ({ donation, onPress, onRequest, isRequested = false, isAno
           {donation.description}
         </Text>
         
-        {onRequest && (
+        {onRequest && !isOwnDonation && (
           <TouchableOpacity
             style={[
               styles.requestButton,
@@ -45,6 +67,17 @@ const DonationCard = ({ donation, onPress, onRequest, isRequested = false, isAno
               {isRequested ? 'Requested' : isAnonymous ? 'Sign In to Request' : 'Request Item'}
             </Text>
           </TouchableOpacity>
+        )}
+
+        {isOwnDonation && (
+          <View style={styles.ownDonationContainer}>
+            <Text style={styles.ownDonationText}>Your Donation</Text>
+            {donation.requestedBy && donation.requestedBy.length > 0 && (
+              <Text style={styles.requestCountText}>
+                {donation.requestedBy.length} request{donation.requestedBy.length !== 1 ? 's' : ''}
+              </Text>
+            )}
+          </View>
         )}
       </View>
     </TouchableOpacity>
@@ -71,6 +104,20 @@ const styles = StyleSheet.create({
     height: 200,
     borderTopLeftRadius: 12,
     borderTopRightRadius: 12,
+  },
+  imagePlaceholder: {
+    width: '100%',
+    height: 200,
+    backgroundColor: '#f5f5f5',
+    borderTopLeftRadius: 12,
+    borderTopRightRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  imagePlaceholderText: {
+    marginTop: 8,
+    fontSize: 14,
+    color: '#999',
   },
   content: {
     padding: 16,
@@ -117,6 +164,23 @@ const styles = StyleSheet.create({
   },
   anonymousButtonText: {
     color: 'white',
+  },
+  ownDonationContainer: {
+    backgroundColor: '#E8F5E8',
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 6,
+    alignItems: 'center',
+  },
+  ownDonationText: {
+    color: '#2E7D32',
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  requestCountText: {
+    color: '#388E3C',
+    fontSize: 11,
+    marginTop: 2,
   },
 });
 

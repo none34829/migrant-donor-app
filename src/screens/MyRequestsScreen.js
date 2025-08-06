@@ -1,4 +1,5 @@
-import { collection, getDocs, orderBy, query, where } from 'firebase/firestore';
+import { useFocusEffect } from '@react-navigation/native';
+import { arrayRemove, collection, doc, getDocs, query, updateDoc, where } from 'firebase/firestore';
 import React, { useEffect, useState } from 'react';
 import {
     Alert,
@@ -6,7 +7,8 @@ import {
     RefreshControl,
     StyleSheet,
     Text,
-    View,
+    TouchableOpacity,
+    View
 } from 'react-native';
 import DonationCard from '../components/DonationCard';
 import { auth, db } from '../config/firebase';
@@ -20,23 +22,55 @@ const MyRequestsScreen = ({ navigation }) => {
     fetchMyRequests();
   }, []);
 
+  // Refresh requests when screen comes into focus
+  useFocusEffect(
+    React.useCallback(() => {
+      fetchMyRequests();
+    }, [])
+  );
+
   const fetchMyRequests = async () => {
     try {
-      // Get all donations where the current user has requested
-      const q = query(
+      const currentUser = auth.currentUser;
+      console.log('Current user:', currentUser?.uid);
+      
+      if (!currentUser) {
+        console.log('No current user found');
+        setDonations([]);
+        return;
+      }
+
+      console.log('Fetching requests for user:', currentUser.uid);
+      
+      // Now try to fetch user's donations - without orderBy to avoid index requirement
+      let q = query(
         collection(db, 'donations'),
-        where('requestedBy', 'array-contains', auth.currentUser.uid),
-        orderBy('createdAt', 'desc')
+        where('requestedBy', 'array-contains', currentUser.uid)
       );
+      
       const querySnapshot = await getDocs(q);
-      const donationsData = querySnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data(),
-      }));
+      console.log('Query snapshot size:', querySnapshot.size);
+      
+      const donationsData = querySnapshot.docs.map(doc => {
+        const data = doc.data();
+        return {
+          id: doc.id,
+          ...data,
+        };
+      });
+      
+      // Sort manually if we have data
+      donationsData.sort((a, b) => {
+        const dateA = a.createdAt?.toDate ? a.createdAt.toDate() : new Date(a.createdAt);
+        const dateB = b.createdAt?.toDate ? b.createdAt.toDate() : new Date(b.createdAt);
+        return dateB - dateA;
+      });
+      
+      console.log('Total requests found:', donationsData.length);
       setDonations(donationsData);
     } catch (error) {
-      Alert.alert('Error', 'Failed to fetch your requests');
       console.error('Error fetching requests:', error);
+      Alert.alert('Error', 'Failed to fetch your requests: ' + error.message);
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -49,8 +83,41 @@ const MyRequestsScreen = ({ navigation }) => {
   };
 
   const handleDonationPress = (donation) => {
-    // For now, just show an alert
-    Alert.alert('Request Details', `Title: ${donation.title}\nCategory: ${donation.category}`);
+    navigation.navigate('DonationDetail', { donation });
+  };
+
+  const handleCancelRequest = async (donation) => {
+    Alert.alert(
+      'Cancel Request',
+      `Are you sure you want to cancel your request for "${donation.title}"?`,
+      [
+        { text: 'No', style: 'cancel' },
+        {
+          text: 'Yes',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              const currentUser = auth.currentUser;
+              if (!currentUser) {
+                Alert.alert('Error', 'Please sign in to cancel requests');
+                return;
+              }
+
+              const donationRef = doc(db, 'donations', donation.id);
+              await updateDoc(donationRef, {
+                requestedBy: arrayRemove(currentUser.uid)
+              });
+              
+              Alert.alert('Request Cancelled', 'Your request has been cancelled');
+              fetchMyRequests(); // Refresh the list
+            } catch (error) {
+              console.error('Error cancelling request:', error);
+              Alert.alert('Error', 'Failed to cancel request. Please try again.');
+            }
+          }
+        }
+      ]
+    );
   };
 
   if (loading) {
@@ -74,6 +141,7 @@ const MyRequestsScreen = ({ navigation }) => {
           <DonationCard
             donation={item}
             onPress={() => handleDonationPress(item)}
+            onRequest={() => handleCancelRequest(item)}
             isRequested={true}
           />
         )}
@@ -90,6 +158,12 @@ const MyRequestsScreen = ({ navigation }) => {
             <Text style={styles.emptySubtext}>
               Browse donations on the Home tab to request items
             </Text>
+            <TouchableOpacity
+              style={styles.browseButton}
+              onPress={() => navigation.navigate('Main', { screen: 'Home' })}
+            >
+              <Text style={styles.browseButtonText}>Browse Donations</Text>
+            </TouchableOpacity>
           </View>
         }
       />
@@ -147,6 +221,18 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#999',
     textAlign: 'center',
+    marginBottom: 24,
+  },
+  browseButton: {
+    backgroundColor: '#007AFF',
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 8,
+  },
+  browseButtonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: '600',
   },
 });
 

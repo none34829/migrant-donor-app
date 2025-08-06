@@ -4,6 +4,8 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import React from 'react';
 import { auth } from '../config/firebase';
 import AddDonationScreen from '../screens/AddDonationScreen';
+import DonationDetailScreen from '../screens/DonationDetailScreen';
+import DonationRequestsScreen from '../screens/DonationRequestsScreen';
 import HomeScreen from '../screens/HomeScreen';
 import MyDonationsScreen from '../screens/MyDonationsScreen';
 import MyRequestsScreen from '../screens/MyRequestsScreen';
@@ -59,6 +61,16 @@ export default function AppNavigator() {
         name="Main" 
         component={TabNavigator}
         options={{ headerShown: false }}
+      />
+      <Stack.Screen 
+        name="DonationDetail" 
+        component={DonationDetailScreen}
+        options={{ title: 'Donation Details' }}
+      />
+      <Stack.Screen 
+        name="DonationRequests" 
+        component={DonationRequestsScreen}
+        options={{ title: 'Requests' }}
       />
       <Stack.Screen 
         name="MyDonations" 

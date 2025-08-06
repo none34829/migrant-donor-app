@@ -1,4 +1,5 @@
-import { collection, getDocs, orderBy, query } from 'firebase/firestore';
+import { useFocusEffect } from '@react-navigation/native';
+import { arrayRemove, arrayUnion, collection, doc, getDocs, orderBy, query, updateDoc } from 'firebase/firestore';
 import React, { useEffect, useState } from 'react';
 import {
   Alert,
@@ -39,22 +40,36 @@ const HomeScreen = ({ navigation }) => {
     fetchDonations();
   }, []);
 
+  // Refresh donations when screen comes into focus
+  useFocusEffect(
+    React.useCallback(() => {
+      fetchDonations();
+    }, [])
+  );
+
   useEffect(() => {
     filterDonations();
   }, [donations, searchQuery, selectedCategory]);
 
   const fetchDonations = async () => {
     try {
+      console.log('Fetching all donations...');
       const q = query(collection(db, 'donations'), orderBy('createdAt', 'desc'));
       const querySnapshot = await getDocs(q);
-      const donationsData = querySnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data(),
-      }));
+      console.log('Total donations in database:', querySnapshot.size);
+      
+      const donationsData = querySnapshot.docs.map(doc => {
+        const data = doc.data();
+        return {
+          id: doc.id,
+          ...data,
+        };
+      });
+      console.log('Donations loaded:', donationsData.length);
       setDonations(donationsData);
     } catch (error) {
-      Alert.alert('Error', 'Failed to fetch donations');
       console.error('Error fetching donations:', error);
+      Alert.alert('Error', 'Failed to fetch donations: ' + error.message);
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -93,14 +108,58 @@ const HomeScreen = ({ navigation }) => {
     navigation.navigate('DonationDetail', { donation });
   };
 
-  const handleRequestItem = (donation) => {
+  const handleRequestItem = async (donation) => {
     if (isAnonymous) {
       // Instantly sign out to redirect to login/signup
       auth.signOut();
       return;
     }
-    // This will be implemented when we add the request functionality
-    Alert.alert('Request Item', `Request sent for ${donation.title}`);
+
+    try {
+      const currentUser = auth.currentUser;
+      console.log('Requesting item - Current user:', currentUser?.uid);
+      console.log('Donation donorId:', donation.donorId);
+      
+      if (!currentUser) {
+        Alert.alert('Error', 'Please sign in to request items');
+        return;
+      }
+
+      // Check if user is requesting their own donation
+      if (donation.donorId === currentUser.uid) {
+        Alert.alert('Cannot Request', 'You cannot request your own donation');
+        return;
+      }
+
+      // Check if already requested
+      const isAlreadyRequested = donation.requestedBy && donation.requestedBy.includes(currentUser.uid);
+      console.log('Already requested:', isAlreadyRequested);
+      console.log('Current requestedBy array:', donation.requestedBy);
+      
+      if (isAlreadyRequested) {
+        // Cancel request
+        const donationRef = doc(db, 'donations', donation.id);
+        await updateDoc(donationRef, {
+          requestedBy: arrayRemove(currentUser.uid)
+        });
+        console.log('Request cancelled for user:', currentUser.uid);
+        Alert.alert('Request Cancelled', 'Your request has been cancelled');
+      } else {
+        // Add request
+        const donationRef = doc(db, 'donations', donation.id);
+        await updateDoc(donationRef, {
+          requestedBy: arrayUnion(currentUser.uid)
+        });
+        console.log('Request added for user:', currentUser.uid);
+        Alert.alert('Request Sent', `Your request for "${donation.title}" has been sent to the donor`);
+      }
+
+      // Refresh the donations list
+      fetchDonations();
+    } catch (error) {
+      console.error('Error requesting item:', error);
+      Alert.alert('Error', 'Failed to process your request. Please try again.');
+    }
   };
 
   const renderDonationItem = ({ item }) => (

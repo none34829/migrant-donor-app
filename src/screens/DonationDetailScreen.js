@@ -1,0 +1,335 @@
+import { Ionicons } from '@expo/vector-icons';
+import { arrayRemove, arrayUnion, doc, getDoc, updateDoc } from 'firebase/firestore';
+import React, { useEffect, useState } from 'react';
+import {
+    ActivityIndicator,
+    Alert,
+    Image,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
+} from 'react-native';
+import { auth, db } from '../config/firebase';
+
+const DonationDetailScreen = ({ route, navigation }) => {
+  const { donation } = route.params;
+  const [donorInfo, setDonorInfo] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [isRequested, setIsRequested] = useState(false);
+
+  const currentUser = auth.currentUser;
+  const isAnonymous = currentUser?.isAnonymous;
+  const isOwnDonation = donation.donorId === currentUser?.uid;
+
+  useEffect(() => {
+    fetchDonorInfo();
+    checkRequestStatus();
+  }, []);
+
+  const fetchDonorInfo = async () => {
+    try {
+      const donorDoc = await getDoc(doc(db, 'users', donation.donorId));
+      if (donorDoc.exists()) {
+        setDonorInfo(donorDoc.data());
+      }
+    } catch (error) {
+      console.error('Error fetching donor info:', error);
+    }
+  };
+
+  const checkRequestStatus = () => {
+    if (donation.requestedBy && currentUser) {
+      setIsRequested(donation.requestedBy.includes(currentUser.uid));
+    }
+  };
+
+  const handleRequest = async () => {
+    if (isAnonymous) {
+      auth.signOut();
+      return;
+    }
+
+    if (!currentUser) {
+      Alert.alert('Error', 'Please sign in to request items');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const donationRef = doc(db, 'donations', donation.id);
+      
+      if (isRequested) {
+        // Cancel request
+        await updateDoc(donationRef, {
+          requestedBy: arrayRemove(currentUser.uid)
+        });
+        setIsRequested(false);
+        Alert.alert('Request Cancelled', 'Your request has been cancelled');
+      } else {
+        // Add request
+        await updateDoc(donationRef, {
+          requestedBy: arrayUnion(currentUser.uid)
+        });
+        setIsRequested(true);
+        Alert.alert('Request Sent', `Your request for "${donation.title}" has been sent to the donor`);
+      }
+    } catch (error) {
+      console.error('Error updating request:', error);
+      Alert.alert('Error', 'Failed to process your request. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const formatDate = (timestamp) => {
+    if (!timestamp) return 'Unknown date';
+    const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
+    return date.toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+    });
+  };
+
+  return (
+    <ScrollView style={styles.container}>
+      <Image source={{ uri: donation.imageUrl }} style={styles.image} />
+      
+      <View style={styles.content}>
+        <Text style={styles.title}>{donation.title}</Text>
+        <Text style={styles.category}>{donation.category}</Text>
+        
+        <View style={styles.infoRow}>
+          <Ionicons name="calendar-outline" size={16} color="#666" />
+          <Text style={styles.infoText}>Posted on {formatDate(donation.createdAt)}</Text>
+        </View>
+
+        <Text style={styles.description}>{donation.description}</Text>
+
+        {donorInfo && (
+          <View style={styles.donorSection}>
+            <Text style={styles.sectionTitle}>Donor Information</Text>
+            <View style={styles.donorInfo}>
+              <Text style={styles.donorName}>{donorInfo.name}</Text>
+              {donorInfo.contact && (
+                <Text style={styles.donorContact}>Contact: {donorInfo.contact}</Text>
+              )}
+              {donorInfo.address && (
+                <Text style={styles.donorAddress}>Location: {donorInfo.address}</Text>
+              )}
+            </View>
+          </View>
+        )}
+
+        {donation.requestedBy && donation.requestedBy.length > 0 && (
+          <View style={styles.requestsSection}>
+            <Text style={styles.sectionTitle}>
+              Requests ({donation.requestedBy.length})
+            </Text>
+            <Text style={styles.requestsText}>
+              {donation.requestedBy.length} person{donation.requestedBy.length !== 1 ? 's have' : ' has'} requested this item
+            </Text>
+          </View>
+        )}
+
+        {!isOwnDonation && (
+          <TouchableOpacity
+            style={[
+              styles.requestButton,
+              isRequested && styles.requestedButton,
+              isAnonymous && styles.anonymousButton,
+              loading && styles.loadingButton
+            ]}
+            onPress={handleRequest}
+            disabled={loading}
+          >
+            {loading ? (
+              <ActivityIndicator color="white" size="small" />
+            ) : (
+              <Text style={[
+                styles.requestButtonText,
+                isRequested && styles.requestedButtonText,
+                isAnonymous && styles.anonymousButtonText
+              ]}>
+                {isRequested ? 'Cancel Request' : isAnonymous ? 'Sign In to Request' : 'Request Item'}
+              </Text>
+            )}
+          </TouchableOpacity>
+        )}
+
+        {isOwnDonation && (
+          <View style={styles.ownDonationContainer}>
+            <Text style={styles.ownDonationText}>This is your donation</Text>
+            <Text style={styles.ownDonationSubtext}>
+              You can view requests in your profile
+            </Text>
+            {donation.requestedBy && donation.requestedBy.length > 0 && (
+              <TouchableOpacity
+                style={styles.viewRequestsButton}
+                onPress={() => navigation.navigate('DonationRequests', { donation })}
+              >
+                <Text style={styles.viewRequestsButtonText}>
+                  View {donation.requestedBy.length} Request{donation.requestedBy.length !== 1 ? 's' : ''}
+                </Text>
+              </TouchableOpacity>
+            )}
+          </View>
+        )}
+      </View>
+    </ScrollView>
+  );
+};
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#f5f5f5',
+  },
+  image: {
+    width: '100%',
+    height: 300,
+    resizeMode: 'cover',
+  },
+  content: {
+    padding: 16,
+  },
+  title: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#333',
+    marginBottom: 8,
+  },
+  category: {
+    fontSize: 16,
+    color: '#007AFF',
+    fontWeight: '600',
+    marginBottom: 12,
+    textTransform: 'uppercase',
+  },
+  infoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  infoText: {
+    marginLeft: 8,
+    color: '#666',
+    fontSize: 14,
+  },
+  description: {
+    fontSize: 16,
+    color: '#333',
+    lineHeight: 24,
+    marginBottom: 24,
+  },
+  donorSection: {
+    backgroundColor: 'white',
+    padding: 16,
+    borderRadius: 12,
+    marginBottom: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#333',
+    marginBottom: 12,
+  },
+  donorInfo: {
+    gap: 4,
+  },
+  donorName: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#333',
+  },
+  donorContact: {
+    fontSize: 14,
+    color: '#666',
+  },
+  donorAddress: {
+    fontSize: 14,
+    color: '#666',
+  },
+  requestsSection: {
+    backgroundColor: 'white',
+    padding: 16,
+    borderRadius: 12,
+    marginBottom: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  requestsText: {
+    fontSize: 14,
+    color: '#666',
+  },
+  requestButton: {
+    backgroundColor: '#007AFF',
+    paddingVertical: 16,
+    paddingHorizontal: 24,
+    borderRadius: 12,
+    alignItems: 'center',
+    marginTop: 8,
+  },
+  requestedButton: {
+    backgroundColor: '#FF3B30',
+  },
+  anonymousButton: {
+    backgroundColor: '#FF9500',
+  },
+  loadingButton: {
+    opacity: 0.7,
+  },
+  requestButtonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  requestedButtonText: {
+    color: 'white',
+  },
+  anonymousButtonText: {
+    color: 'white',
+  },
+  ownDonationContainer: {
+    backgroundColor: '#E8F5E8',
+    padding: 16,
+    borderRadius: 12,
+    alignItems: 'center',
+    marginTop: 8,
+  },
+  ownDonationText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#2E7D32',
+  },
+  ownDonationSubtext: {
+    fontSize: 14,
+    color: '#388E3C',
+    marginTop: 4,
+  },
+  viewRequestsButton: {
+    backgroundColor: '#007AFF',
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 8,
+    marginTop: 12,
+  },
+  viewRequestsButtonText: {
+    color: 'white',
+    fontSize: 14,
+    fontWeight: '600',
+    textAlign: 'center',
+  },
+});
+
+export default DonationDetailScreen; 
