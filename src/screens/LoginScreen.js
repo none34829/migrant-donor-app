@@ -1,4 +1,4 @@
-import { signInWithEmailAndPassword } from 'firebase/auth';
+import { signInAnonymously, signInWithEmailAndPassword } from 'firebase/auth';
 import React, { useState } from 'react';
 import {
     Alert,
@@ -35,10 +35,16 @@ const LoginScreen = ({ navigation }) => {
     }
   };
 
-  const handleAnonymousLogin = () => {
-    // For anonymous browsing, you might want to set a flag in your app state
-    // For now, we'll just show an alert
-    Alert.alert('Anonymous Mode', 'You can browse donations without creating an account');
+  const handleAnonymousLogin = async () => {
+    setLoading(true);
+    try {
+      await signInAnonymously(auth);
+      // Navigation will be handled automatically by the auth state change
+    } catch (error) {
+      Alert.alert('Anonymous Login Failed', error.message);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (

@@ -23,20 +23,38 @@ const ProfileScreen = ({ navigation }) => {
   const [anonymous, setAnonymous] = useState(false);
   const [saving, setSaving] = useState(false);
 
+  // Check if current user is anonymous
+  const isAnonymous = auth.currentUser?.isAnonymous;
+
   useEffect(() => {
     fetchUserProfile();
   }, []);
 
   const fetchUserProfile = async () => {
     try {
-      const userDoc = await getDoc(doc(db, 'users', auth.currentUser.uid));
-      if (userDoc.exists()) {
-        const userData = userDoc.data();
-        setUser(userData);
-        setName(userData.name || '');
-        setContact(userData.contact || '');
-        setAddress(userData.address || '');
-        setAnonymous(userData.anonymous || false);
+      // For anonymous users, we can't fetch profile from Firestore
+      if (isAnonymous) {
+        setUser({
+          name: 'Anonymous User',
+          email: 'anonymous@example.com',
+          contact: 'Not available',
+          address: 'Not available',
+          anonymous: true,
+        });
+        setName('Anonymous User');
+        setContact('Not available');
+        setAddress('Not available');
+        setAnonymous(true);
+      } else {
+        const userDoc = await getDoc(doc(db, 'users', auth.currentUser.uid));
+        if (userDoc.exists()) {
+          const userData = userDoc.data();
+          setUser(userData);
+          setName(userData.name || '');
+          setContact(userData.contact || '');
+          setAddress(userData.address || '');
+          setAnonymous(userData.anonymous || false);
+        }
       }
     } catch (error) {
       Alert.alert('Error', 'Failed to fetch profile');
@@ -47,6 +65,11 @@ const ProfileScreen = ({ navigation }) => {
   };
 
   const handleSave = async () => {
+    if (isAnonymous) {
+      Alert.alert('Restricted', 'Anonymous users cannot edit their profile. Please sign up or log in.');
+      return;
+    }
+
     if (!name.trim()) {
       Alert.alert('Error', 'Name is required');
       return;
@@ -104,24 +127,41 @@ const ProfileScreen = ({ navigation }) => {
       <View style={styles.header}>
         <Text style={styles.title}>Profile</Text>
         <Text style={styles.subtitle}>Manage your account</Text>
+        {isAnonymous && (
+          <View style={styles.anonymousBanner}>
+            <Text style={styles.anonymousBannerText}>
+              🔒 Anonymous Mode - Limited Access
+            </Text>
+          </View>
+        )}
       </View>
 
       <View style={styles.profileSection}>
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>Personal Information</Text>
-          <TouchableOpacity
-            style={styles.editButton}
-            onPress={() => setEditing(!editing)}
-          >
-            <Text style={styles.editButtonText}>
-              {editing ? 'Cancel' : 'Edit'}
-            </Text>
-          </TouchableOpacity>
+          {!isAnonymous && (
+            <TouchableOpacity
+              style={styles.editButton}
+              onPress={() => setEditing(!editing)}
+            >
+              <Text style={styles.editButtonText}>
+                {editing ? 'Cancel' : 'Edit'}
+              </Text>
+            </TouchableOpacity>
+          )}
         </View>
+
+        {isAnonymous && (
+          <View style={styles.restrictedMessage}>
+            <Text style={styles.restrictedText}>
+              Profile editing is not available for anonymous users. Sign up or log in to access full features.
+            </Text>
+          </View>
+        )}
 
         <View style={styles.infoContainer}>
           <Text style={styles.label}>Name</Text>
-          {editing ? (
+          {editing && !isAnonymous ? (
             <TextInput
               style={styles.input}
               value={name}
@@ -135,12 +175,12 @@ const ProfileScreen = ({ navigation }) => {
 
         <View style={styles.infoContainer}>
           <Text style={styles.label}>Email</Text>
-          <Text style={styles.value}>{auth.currentUser.email}</Text>
+          <Text style={styles.value}>{auth.currentUser.email || 'Anonymous'}</Text>
         </View>
 
         <View style={styles.infoContainer}>
           <Text style={styles.label}>Contact Number</Text>
-          {editing ? (
+          {editing && !isAnonymous ? (
             <TextInput
               style={styles.input}
               value={contact}
@@ -155,7 +195,7 @@ const ProfileScreen = ({ navigation }) => {
 
         <View style={styles.infoContainer}>
           <Text style={styles.label}>Address</Text>
-          {editing ? (
+          {editing && !isAnonymous ? (
             <TextInput
               style={[styles.input, styles.textArea]}
               value={address}
@@ -178,12 +218,12 @@ const ProfileScreen = ({ navigation }) => {
             <Switch
               value={anonymous}
               onValueChange={setAnonymous}
-              disabled={!editing}
+              disabled={!editing || isAnonymous}
             />
           </View>
         </View>
 
-        {editing && (
+        {editing && !isAnonymous && (
           <TouchableOpacity
             style={[styles.saveButton, saving && styles.saveButtonDisabled]}
             onPress={handleSave}
@@ -198,17 +238,35 @@ const ProfileScreen = ({ navigation }) => {
 
       <View style={styles.actionsSection}>
         <TouchableOpacity
-          style={styles.actionButton}
-          onPress={() => navigation.navigate('MyDonations')}
+          style={[styles.actionButton, isAnonymous && styles.disabledButton]}
+          onPress={() => {
+            if (isAnonymous) {
+              Alert.alert('Restricted', 'My Donations is not available for anonymous users.');
+            } else {
+              navigation.navigate('MyDonations');
+            }
+          }}
+          disabled={isAnonymous}
         >
-          <Text style={styles.actionButtonText}>My Donations</Text>
+          <Text style={[styles.actionButtonText, isAnonymous && styles.disabledButtonText]}>
+            My Donations
+          </Text>
         </TouchableOpacity>
 
         <TouchableOpacity
-          style={styles.actionButton}
-          onPress={() => navigation.navigate('MyRequests')}
+          style={[styles.actionButton, isAnonymous && styles.disabledButton]}
+          onPress={() => {
+            if (isAnonymous) {
+              Alert.alert('Restricted', 'My Requests is not available for anonymous users.');
+            } else {
+              navigation.navigate('MyRequests');
+            }
+          }}
+          disabled={isAnonymous}
         >
-          <Text style={styles.actionButtonText}>My Requests</Text>
+          <Text style={[styles.actionButtonText, isAnonymous && styles.disabledButtonText]}>
+            My Requests
+          </Text>
         </TouchableOpacity>
 
         <TouchableOpacity
@@ -259,6 +317,20 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#666',
   },
+  anonymousBanner: {
+    backgroundColor: '#FFF3CD',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
+    marginTop: 12,
+    borderWidth: 1,
+    borderColor: '#FFEAA7',
+  },
+  anonymousBannerText: {
+    fontSize: 14,
+    color: '#856404',
+    fontWeight: '500',
+  },
   profileSection: {
     backgroundColor: 'white',
     margin: 16,
@@ -286,6 +358,19 @@ const styles = StyleSheet.create({
     color: 'white',
     fontSize: 14,
     fontWeight: '600',
+  },
+  restrictedMessage: {
+    backgroundColor: '#F8D7DA',
+    padding: 12,
+    borderRadius: 8,
+    marginBottom: 20,
+    borderWidth: 1,
+    borderColor: '#F5C6CB',
+  },
+  restrictedText: {
+    fontSize: 14,
+    color: '#721C24',
+    textAlign: 'center',
   },
   infoContainer: {
     marginBottom: 20,
@@ -351,6 +436,13 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#333',
     fontWeight: '500',
+  },
+  disabledButton: {
+    backgroundColor: '#F5F5F5',
+    opacity: 0.6,
+  },
+  disabledButtonText: {
+    color: '#999',
   },
   signOutButton: {
     backgroundColor: '#FF3B30',

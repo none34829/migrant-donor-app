@@ -10,7 +10,7 @@ import {
 
 const { width } = Dimensions.get('window');
 
-const DonationCard = ({ donation, onPress, onRequest, isRequested = false }) => {
+const DonationCard = ({ donation, onPress, onRequest, isRequested = false, isAnonymous = false }) => {
   return (
     <TouchableOpacity style={styles.card} onPress={onPress}>
       <Image
@@ -31,16 +31,18 @@ const DonationCard = ({ donation, onPress, onRequest, isRequested = false }) => 
           <TouchableOpacity
             style={[
               styles.requestButton,
-              isRequested && styles.requestedButton
+              isRequested && styles.requestedButton,
+              isAnonymous && styles.anonymousButton
             ]}
             onPress={onRequest}
             disabled={isRequested}
           >
             <Text style={[
               styles.requestButtonText,
-              isRequested && styles.requestedButtonText
+              isRequested && styles.requestedButtonText,
+              isAnonymous && styles.anonymousButtonText
             ]}>
-              {isRequested ? 'Requested' : 'Request Item'}
+              {isRequested ? 'Requested' : isAnonymous ? 'Sign In to Request' : 'Request Item'}
             </Text>
           </TouchableOpacity>
         )}
@@ -102,6 +104,9 @@ const styles = StyleSheet.create({
   requestedButton: {
     backgroundColor: '#E5E5EA',
   },
+  anonymousButton: {
+    backgroundColor: '#FF9500',
+  },
   requestButtonText: {
     color: 'white',
     fontSize: 14,
@@ -109,6 +114,9 @@ const styles = StyleSheet.create({
   },
   requestedButtonText: {
     color: '#8E8E93',
+  },
+  anonymousButtonText: {
+    color: 'white',
   },
 });
 

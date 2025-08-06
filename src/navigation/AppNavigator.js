@@ -2,6 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import React from 'react';
+import { auth } from '../config/firebase';
 import AddDonationScreen from '../screens/AddDonationScreen';
 import HomeScreen from '../screens/HomeScreen';
 import MyDonationsScreen from '../screens/MyDonationsScreen';
@@ -12,6 +13,9 @@ const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
 
 function TabNavigator() {
+  // Check if current user is anonymous
+  const isAnonymous = auth.currentUser?.isAnonymous;
+
   return (
     <Tab.Navigator
       screenOptions={({ route }) => ({
@@ -34,7 +38,15 @@ function TabNavigator() {
       })}
     >
       <Tab.Screen name="Home" component={HomeScreen} />
-      <Tab.Screen name="Add" component={AddDonationScreen} />
+      {!isAnonymous && (
+        <Tab.Screen 
+          name="Add" 
+          component={AddDonationScreen}
+          options={{
+            tabBarLabel: 'Add Donation'
+          }}
+        />
+      )}
       <Tab.Screen name="Profile" component={ProfileScreen} />
     </Tab.Navigator>
   );

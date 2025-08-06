@@ -1,17 +1,17 @@
 import { collection, getDocs, orderBy, query } from 'firebase/firestore';
 import React, { useEffect, useState } from 'react';
 import {
-    Alert,
-    FlatList,
-    RefreshControl,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  Alert,
+  FlatList,
+  RefreshControl,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import DonationCard from '../components/DonationCard';
-import { db } from '../config/firebase';
+import { auth, db } from '../config/firebase';
 
 const CATEGORIES = [
   'All',
@@ -31,6 +31,9 @@ const HomeScreen = ({ navigation }) => {
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+
+  // Check if current user is anonymous
+  const isAnonymous = auth.currentUser?.isAnonymous;
 
   useEffect(() => {
     fetchDonations();
@@ -91,6 +94,11 @@ const HomeScreen = ({ navigation }) => {
   };
 
   const handleRequestItem = (donation) => {
+    if (isAnonymous) {
+      // Instantly sign out to redirect to login/signup
+      auth.signOut();
+      return;
+    }
     // This will be implemented when we add the request functionality
     Alert.alert('Request Item', `Request sent for ${donation.title}`);
   };
@@ -100,6 +108,7 @@ const HomeScreen = ({ navigation }) => {
       donation={item}
       onPress={() => handleDonationPress(item)}
       onRequest={() => handleRequestItem(item)}
+      isAnonymous={isAnonymous}
     />
   );
 
@@ -132,6 +141,15 @@ const HomeScreen = ({ navigation }) => {
 
   return (
     <View style={styles.container}>
+      {/* Anonymous User Banner */}
+      {isAnonymous && (
+        <View style={styles.anonymousBanner}>
+          <Text style={styles.anonymousBannerText}>
+            🔒 Anonymous Mode - You can browse donations but cannot request items or add donations
+          </Text>
+        </View>
+      )}
+
       {/* Search Bar */}
       <View style={styles.searchContainer}>
         <TextInput
@@ -191,6 +209,19 @@ const styles = StyleSheet.create({
   loadingText: {
     fontSize: 16,
     color: '#666',
+  },
+  anonymousBanner: {
+    backgroundColor: '#FFF3CD',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#FFEAA7',
+  },
+  anonymousBannerText: {
+    fontSize: 14,
+    color: '#856404',
+    textAlign: 'center',
+    fontWeight: '500',
   },
   searchContainer: {
     padding: 16,

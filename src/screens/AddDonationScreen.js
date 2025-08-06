@@ -33,6 +33,9 @@ const AddDonationScreen = ({ navigation }) => {
   const [image, setImage] = useState(null);
   const [loading, setLoading] = useState(false);
 
+  // Check if current user is anonymous
+  const isAnonymous = auth.currentUser?.isAnonymous;
+
   const pickImage = async () => {
     try {
       const result = await ImagePicker.launchImageLibraryAsync({
@@ -66,6 +69,11 @@ const AddDonationScreen = ({ navigation }) => {
   };
 
   const handleSubmit = async () => {
+    if (isAnonymous) {
+      Alert.alert('Restricted', 'Anonymous users cannot add donations. Please sign up or log in.');
+      return;
+    }
+
     if (!title.trim() || !description.trim()) {
       Alert.alert('Error', 'Please fill in all required fields');
       return;
@@ -101,6 +109,32 @@ const AddDonationScreen = ({ navigation }) => {
       setLoading(false);
     }
   };
+
+  // Show restricted message for anonymous users
+  if (isAnonymous) {
+    return (
+      <View style={styles.container}>
+        <View style={styles.restrictedContainer}>
+          <View style={styles.restrictedIcon}>
+            <Text style={styles.restrictedIconText}>🔒</Text>
+          </View>
+          <Text style={styles.restrictedTitle}>Access Restricted</Text>
+          <Text style={styles.restrictedMessage}>
+            Anonymous users cannot add donations. To share items with the community, please sign up or log in with your account.
+          </Text>
+          <TouchableOpacity
+            style={styles.signUpButton}
+            onPress={() => {
+              // Sign out to go back to login screen
+              auth.signOut();
+            }}
+          >
+            <Text style={styles.signUpButtonText}>Sign Up / Log In</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    );
+  }
 
   return (
     <KeyboardAvoidingView
@@ -266,6 +300,50 @@ const styles = StyleSheet.create({
     backgroundColor: '#B0B0B0',
   },
   buttonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  // Restricted view styles
+  restrictedContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 40,
+  },
+  restrictedIcon: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: '#F8D7DA',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  restrictedIconText: {
+    fontSize: 40,
+  },
+  restrictedTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#721C24',
+    marginBottom: 16,
+    textAlign: 'center',
+  },
+  restrictedMessage: {
+    fontSize: 16,
+    color: '#721C24',
+    textAlign: 'center',
+    lineHeight: 24,
+    marginBottom: 30,
+  },
+  signUpButton: {
+    backgroundColor: '#007AFF',
+    borderRadius: 8,
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+  },
+  signUpButtonText: {
     color: 'white',
     fontSize: 16,
     fontWeight: '600',
