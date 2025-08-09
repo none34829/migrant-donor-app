@@ -11,6 +11,7 @@ import {
     TouchableOpacity,
     View,
 } from 'react-native';
+import theme from '../../constants/theme';
 import { auth, db } from '../config/firebase';
 
 const DonationDetailScreen = ({ route, navigation }) => {
@@ -99,7 +100,7 @@ const DonationDetailScreen = ({ route, navigation }) => {
       
       <View style={styles.content}>
         <Text style={styles.title}>{donation.title}</Text>
-        <Text style={styles.category}>{donation.category}</Text>
+        <Text style={styles.category}>{donation.category}{donation.subcategory ? ` · ${donation.subcategory}` : ''}</Text>
         
         <View style={styles.infoRow}>
           <Ionicons name="calendar-outline" size={16} color="#666" />
@@ -185,7 +186,7 @@ const DonationDetailScreen = ({ route, navigation }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: theme.colors.background,
   },
   image: {
     width: '100%',
@@ -198,12 +199,12 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#333',
+    color: theme.colors.textPrimary,
     marginBottom: 8,
   },
   category: {
     fontSize: 16,
-    color: '#007AFF',
+    color: theme.colors.accent,
     fontWeight: '600',
     marginBottom: 12,
     textTransform: 'uppercase',
@@ -215,30 +216,32 @@ const styles = StyleSheet.create({
   },
   infoText: {
     marginLeft: 8,
-    color: '#666',
+    color: theme.colors.textSecondary,
     fontSize: 14,
   },
   description: {
     fontSize: 16,
-    color: '#333',
+    color: theme.colors.textPrimary,
     lineHeight: 24,
     marginBottom: 24,
   },
   donorSection: {
-    backgroundColor: 'white',
+    backgroundColor: theme.colors.surface,
     padding: 16,
     borderRadius: 12,
     marginBottom: 16,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    shadowOpacity: 0.06,
+    shadowRadius: 6,
+    elevation: 2,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
   },
   sectionTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#333',
+    color: theme.colors.textPrimary,
     marginBottom: 12,
   },
   donorInfo: {
@@ -247,33 +250,35 @@ const styles = StyleSheet.create({
   donorName: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#333',
+    color: theme.colors.textPrimary,
   },
   donorContact: {
     fontSize: 14,
-    color: '#666',
+    color: theme.colors.textSecondary,
   },
   donorAddress: {
     fontSize: 14,
-    color: '#666',
+    color: theme.colors.textSecondary,
   },
   requestsSection: {
-    backgroundColor: 'white',
+    backgroundColor: theme.colors.surface,
     padding: 16,
     borderRadius: 12,
     marginBottom: 16,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    shadowOpacity: 0.06,
+    shadowRadius: 6,
+    elevation: 2,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
   },
   requestsText: {
     fontSize: 14,
-    color: '#666',
+    color: theme.colors.textSecondary,
   },
   requestButton: {
-    backgroundColor: '#007AFF',
+    backgroundColor: theme.colors.primary,
     paddingVertical: 16,
     paddingHorizontal: 24,
     borderRadius: 12,
@@ -281,10 +286,10 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   requestedButton: {
-    backgroundColor: '#FF3B30',
+    backgroundColor: theme.colors.danger,
   },
   anonymousButton: {
-    backgroundColor: '#FF9500',
+    backgroundColor: theme.colors.warning,
   },
   loadingButton: {
     opacity: 0.7,
@@ -301,24 +306,26 @@ const styles = StyleSheet.create({
     color: 'white',
   },
   ownDonationContainer: {
-    backgroundColor: '#E8F5E8',
+    backgroundColor: theme.colors.background,
     padding: 16,
     borderRadius: 12,
     alignItems: 'center',
     marginTop: 8,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
   },
   ownDonationText: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#2E7D32',
+    color: theme.colors.accent,
   },
   ownDonationSubtext: {
     fontSize: 14,
-    color: '#388E3C',
+    color: theme.colors.textSecondary,
     marginTop: 4,
   },
   viewRequestsButton: {
-    backgroundColor: '#007AFF',
+    backgroundColor: theme.colors.primary,
     paddingVertical: 12,
     paddingHorizontal: 20,
     borderRadius: 8,

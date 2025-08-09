@@ -2,15 +2,16 @@ import { signOut } from 'firebase/auth';
 import { doc, getDoc, updateDoc } from 'firebase/firestore';
 import React, { useEffect, useState } from 'react';
 import {
-    Alert,
-    ScrollView,
-    StyleSheet,
-    Switch,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  Alert,
+  ScrollView,
+  StyleSheet,
+  Switch,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
+import theme from '../../constants/theme';
 import { auth, db } from '../config/firebase';
 
 const ProfileScreen = ({ navigation }) => {
@@ -32,7 +33,6 @@ const ProfileScreen = ({ navigation }) => {
 
   const fetchUserProfile = async () => {
     try {
-      // For anonymous users, we can't fetch profile from Firestore
       if (isAnonymous) {
         setUser({
           name: 'Anonymous User',
@@ -105,11 +105,8 @@ const ProfileScreen = ({ navigation }) => {
 
   const handleSignOut = async () => {
     try {
-      console.log('Signing out...');
       await signOut(auth);
-      console.log('Sign out successful');
     } catch (error) {
-      console.error('Sign out error:', error);
       Alert.alert('Error', 'Failed to sign out: ' + error.message);
     }
   };
@@ -129,9 +126,7 @@ const ProfileScreen = ({ navigation }) => {
         <Text style={styles.subtitle}>Manage your account</Text>
         {isAnonymous && (
           <View style={styles.anonymousBanner}>
-            <Text style={styles.anonymousBannerText}>
-              🔒 Anonymous Mode - Limited Access
-            </Text>
+            <Text style={styles.anonymousBannerText}>🔒 Anonymous Mode - Limited Access</Text>
           </View>
         )}
       </View>
@@ -140,13 +135,8 @@ const ProfileScreen = ({ navigation }) => {
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>Personal Information</Text>
           {!isAnonymous && (
-            <TouchableOpacity
-              style={styles.editButton}
-              onPress={() => setEditing(!editing)}
-            >
-              <Text style={styles.editButtonText}>
-                {editing ? 'Cancel' : 'Edit'}
-              </Text>
+            <TouchableOpacity style={styles.editButton} onPress={() => setEditing(!editing)}>
+              <Text style={styles.editButtonText}>{editing ? 'Cancel' : 'Edit'}</Text>
             </TouchableOpacity>
           )}
         </View>
@@ -162,12 +152,7 @@ const ProfileScreen = ({ navigation }) => {
         <View style={styles.infoContainer}>
           <Text style={styles.label}>Name</Text>
           {editing && !isAnonymous ? (
-            <TextInput
-              style={styles.input}
-              value={name}
-              onChangeText={setName}
-              placeholder="Enter your name"
-            />
+            <TextInput style={styles.input} value={name} onChangeText={setName} placeholder="Enter your name" />
           ) : (
             <Text style={styles.value}>{user?.name || 'Not set'}</Text>
           )}
@@ -212,26 +197,14 @@ const ProfileScreen = ({ navigation }) => {
         <View style={styles.infoContainer}>
           <Text style={styles.label}>Anonymous Mode</Text>
           <View style={styles.switchContainer}>
-            <Text style={styles.switchLabel}>
-              {anonymous ? 'Enabled' : 'Disabled'}
-            </Text>
-            <Switch
-              value={anonymous}
-              onValueChange={setAnonymous}
-              disabled={!editing || isAnonymous}
-            />
+            <Text style={styles.switchLabel}>{anonymous ? 'Enabled' : 'Disabled'}</Text>
+            <Switch value={anonymous} onValueChange={setAnonymous} disabled={!editing || isAnonymous} />
           </View>
         </View>
 
         {editing && !isAnonymous && (
-          <TouchableOpacity
-            style={[styles.saveButton, saving && styles.saveButtonDisabled]}
-            onPress={handleSave}
-            disabled={saving}
-          >
-            <Text style={styles.saveButtonText}>
-              {saving ? 'Saving...' : 'Save Changes'}
-            </Text>
+          <TouchableOpacity style={[styles.saveButton, saving && styles.saveButtonDisabled]} onPress={handleSave} disabled={saving}>
+            <Text style={styles.saveButtonText}>{saving ? 'Saving...' : 'Save Changes'}</Text>
           </TouchableOpacity>
         )}
       </View>
@@ -239,46 +212,22 @@ const ProfileScreen = ({ navigation }) => {
       <View style={styles.actionsSection}>
         <TouchableOpacity
           style={[styles.actionButton, isAnonymous && styles.disabledButton]}
-          onPress={() => {
-            if (isAnonymous) {
-              Alert.alert('Restricted', 'My Donations is not available for anonymous users.');
-            } else {
-              navigation.navigate('MyDonations');
-            }
-          }}
+          onPress={() => (isAnonymous ? Alert.alert('Restricted', 'My Donations is not available for anonymous users.') : navigation.navigate('MyDonations'))}
           disabled={isAnonymous}
         >
-          <Text style={[styles.actionButtonText, isAnonymous && styles.disabledButtonText]}>
-            My Donations
-          </Text>
+          <Text style={[styles.actionButtonText, isAnonymous && styles.disabledButtonText]}>My Donations</Text>
         </TouchableOpacity>
 
         <TouchableOpacity
           style={[styles.actionButton, isAnonymous && styles.disabledButton]}
-          onPress={() => {
-            if (isAnonymous) {
-              Alert.alert('Restricted', 'My Requests is not available for anonymous users.');
-            } else {
-              navigation.navigate('MyRequests');
-            }
-          }}
+          onPress={() => (isAnonymous ? Alert.alert('Restricted', 'My Requests is not available for anonymous users.') : navigation.navigate('MyRequests'))}
           disabled={isAnonymous}
         >
-          <Text style={[styles.actionButtonText, isAnonymous && styles.disabledButtonText]}>
-            My Requests
-          </Text>
+          <Text style={[styles.actionButtonText, isAnonymous && styles.disabledButtonText]}>My Requests</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity
-          style={[styles.actionButton, styles.signOutButton]}
-          onPress={() => {
-            console.log('Sign Out button clicked!');
-            handleSignOut();
-          }}
-        >
-          <Text style={[styles.actionButtonText, styles.signOutButtonText]}>
-            Sign Out
-          </Text>
+        <TouchableOpacity style={[styles.actionButton, styles.signOutButton]} onPress={handleSignOut}>
+          <Text style={[styles.actionButtonText, styles.signOutButtonText]}>Sign Out</Text>
         </TouchableOpacity>
       </View>
     </ScrollView>
@@ -288,54 +237,56 @@ const ProfileScreen = ({ navigation }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: theme.colors.background,
   },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#f5f5f5',
+    backgroundColor: theme.colors.background,
   },
   loadingText: {
     fontSize: 16,
-    color: '#666',
+    color: theme.colors.textSecondary,
   },
   header: {
     alignItems: 'center',
     padding: 20,
-    backgroundColor: 'white',
+    backgroundColor: theme.colors.surface,
     borderBottomWidth: 1,
-    borderBottomColor: '#E5E5EA',
+    borderBottomColor: theme.colors.border,
   },
   title: {
     fontSize: 28,
     fontWeight: 'bold',
-    color: '#333',
+    color: theme.colors.textPrimary,
     marginBottom: 8,
   },
   subtitle: {
     fontSize: 16,
-    color: '#666',
+    color: theme.colors.textSecondary,
   },
   anonymousBanner: {
-    backgroundColor: '#FFF3CD',
+    backgroundColor: theme.colors.chipBackground,
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 8,
     marginTop: 12,
     borderWidth: 1,
-    borderColor: '#FFEAA7',
+    borderColor: theme.colors.border,
   },
   anonymousBannerText: {
     fontSize: 14,
-    color: '#856404',
+    color: theme.colors.textPrimary,
     fontWeight: '500',
   },
   profileSection: {
-    backgroundColor: 'white',
+    backgroundColor: theme.colors.surface,
     margin: 16,
     borderRadius: 12,
     padding: 16,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
   },
   sectionHeader: {
     flexDirection: 'row',
@@ -346,13 +297,13 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#333',
+    color: theme.colors.textPrimary,
   },
   editButton: {
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 6,
-    backgroundColor: '#007AFF',
+    backgroundColor: theme.colors.primary,
   },
   editButtonText: {
     color: 'white',
@@ -360,16 +311,16 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   restrictedMessage: {
-    backgroundColor: '#F8D7DA',
+    backgroundColor: theme.colors.chipBackground,
     padding: 12,
     borderRadius: 8,
     marginBottom: 20,
     borderWidth: 1,
-    borderColor: '#F5C6CB',
+    borderColor: theme.colors.border,
   },
   restrictedText: {
     fontSize: 14,
-    color: '#721C24',
+    color: theme.colors.textSecondary,
     textAlign: 'center',
   },
   infoContainer: {
@@ -377,21 +328,22 @@ const styles = StyleSheet.create({
   },
   label: {
     fontSize: 14,
-    color: '#666',
+    color: theme.colors.textSecondary,
     marginBottom: 4,
   },
   value: {
     fontSize: 16,
-    color: '#333',
+    color: theme.colors.textPrimary,
     fontWeight: '500',
   },
   input: {
-    backgroundColor: '#f5f5f5',
+    backgroundColor: theme.colors.background,
     borderRadius: 8,
     padding: 12,
     fontSize: 16,
     borderWidth: 1,
-    borderColor: '#E5E5EA',
+    borderColor: theme.colors.border,
+    color: theme.colors.textPrimary,
   },
   textArea: {
     height: 80,
@@ -404,18 +356,18 @@ const styles = StyleSheet.create({
   },
   switchLabel: {
     fontSize: 16,
-    color: '#333',
+    color: theme.colors.textPrimary,
     fontWeight: '500',
   },
   saveButton: {
-    backgroundColor: '#007AFF',
+    backgroundColor: theme.colors.primary,
     borderRadius: 8,
     padding: 16,
     alignItems: 'center',
     marginTop: 20,
   },
   saveButtonDisabled: {
-    backgroundColor: '#B0B0B0',
+    backgroundColor: theme.colors.muted,
   },
   saveButtonText: {
     color: 'white',
@@ -426,26 +378,28 @@ const styles = StyleSheet.create({
     margin: 16,
   },
   actionButton: {
-    backgroundColor: 'white',
+    backgroundColor: theme.colors.surface,
     borderRadius: 8,
     padding: 16,
     marginBottom: 12,
     alignItems: 'center',
+    borderWidth: 1,
+    borderColor: theme.colors.border,
   },
   actionButtonText: {
     fontSize: 16,
-    color: '#333',
+    color: theme.colors.textPrimary,
     fontWeight: '500',
   },
   disabledButton: {
-    backgroundColor: '#F5F5F5',
+    backgroundColor: theme.colors.background,
     opacity: 0.6,
   },
   disabledButtonText: {
-    color: '#999',
+    color: theme.colors.textSecondary,
   },
   signOutButton: {
-    backgroundColor: '#FF3B30',
+    backgroundColor: theme.colors.danger,
     marginTop: 20,
   },
   signOutButtonText: {

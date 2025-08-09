@@ -11,25 +11,60 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import theme from '../../constants/theme';
 import DonationCard from '../components/DonationCard';
 import { auth, db } from '../config/firebase';
 
-const CATEGORIES = [
-  'All',
-  'Electronics',
-  'Furniture',
-  'Clothing',
-  'Books',
-  'Kitchen',
-  'Sports',
-  'Other',
-];
+const CATEGORY_TREE = {
+  'Clothes': [
+    'Shirts', 'T-shirts', 'Shorts', 'Pants', 'Skirts', 'Dress', 'Night suit',
+    'Jackets', 'Hoodies', 'Woolens', 'Gym wear', 'Others'
+  ],
+  'Shoes, accessories': [
+    'Formal shoes', 'Sports shoes', 'Sandals', 'Slippers', 'Watch', 'Jewellery'
+  ],
+  'Toiletries': [
+    'Soap', 'Shampoo conditioner', 'Toothpaste', 'Toothbrush', 'Hairbrush',
+    'Moisturizer cream', 'Deodorant', 'Makeup kit', 'Makeup remover',
+    'Sunscreen', 'Razor', 'Shaving gel', 'Others'
+  ],
+  'Electric and Electronics': [
+    'Phone', 'Computer', 'Laptop', 'Microwave', 'Lamp', 'Table fan',
+    'Mixer grinder', 'Others'
+  ],
+  'Food (dry or packaged only)': [
+    'Spices', 'Dals', 'Atta', 'Rice', 'Health snacks', 'Sweets', 'Chocolate',
+    'Cookies', 'Chips', 'Others'
+  ],
+  'Sports': [
+    'Cricket bat/ ball set', 'Football', 'Basketball', 'Hockey', 'Tennis', 'Others'
+  ],
+  'Toys': [
+    'Puzzles', 'Building blocks', 'Board games', 'Soft toys', 'Bath toys',
+    'Play dough', 'Kitchen set', 'Figurines', 'Dolls', 'Cars , other vehicles',
+    'Others'
+  ],
+  'Furniture and furnishing': [
+    'Chairs', 'Dining Table', 'Study table', 'Side table', 'Cabinet', 'Curtains',
+    'Bed', 'Mattress', 'Others'
+  ],
+  'Kitchen stuff': [
+    'Pans', 'Pots', 'Pressure cooker', 'Tawa', 'Wok', 'Spice jars',
+    'Water bottle', 'Water Jugs', 'Plates', 'Glasses', 'Crockery', 'Cutlery',
+    'Others'
+  ],
+  'Others': ['Others']
+};
+
+const MAIN_CATEGORIES = ['All', ...Object.keys(CATEGORY_TREE)];
 
 const HomeScreen = ({ navigation }) => {
   const [donations, setDonations] = useState([]);
   const [filteredDonations, setFilteredDonations] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All');
+  const [selectedSubcategory, setSelectedSubcategory] = useState(null);
+  const [openDropdownFor, setOpenDropdownFor] = useState(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
@@ -49,23 +84,13 @@ const HomeScreen = ({ navigation }) => {
 
   useEffect(() => {
     filterDonations();
-  }, [donations, searchQuery, selectedCategory]);
+  }, [donations, searchQuery, selectedCategory, selectedSubcategory]);
 
   const fetchDonations = async () => {
     try {
-      console.log('Fetching all donations...');
       const q = query(collection(db, 'donations'), orderBy('createdAt', 'desc'));
       const querySnapshot = await getDocs(q);
-      console.log('Total donations in database:', querySnapshot.size);
-      
-      const donationsData = querySnapshot.docs.map(doc => {
-        const data = doc.data();
-        return {
-          id: doc.id,
-          ...data,
-        };
-      });
-      console.log('Donations loaded:', donationsData.length);
+      const donationsData = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       setDonations(donationsData);
     } catch (error) {
       console.error('Error fetching donations:', error);
@@ -81,18 +106,20 @@ const HomeScreen = ({ navigation }) => {
 
     // Filter by category
     if (selectedCategory !== 'All') {
-      filtered = filtered.filter(donation => 
-        donation.category === selectedCategory
-      );
+      filtered = filtered.filter(donation => donation.category === selectedCategory);
+      if (selectedSubcategory) {
+        filtered = filtered.filter(donation => donation.subcategory === selectedSubcategory);
+      }
     }
 
     // Filter by search query
     if (searchQuery.trim()) {
-      const query = searchQuery.toLowerCase();
+      const q = searchQuery.toLowerCase();
       filtered = filtered.filter(donation =>
-        donation.title.toLowerCase().includes(query) ||
-        donation.description.toLowerCase().includes(query) ||
-        donation.category.toLowerCase().includes(query)
+        donation.title.toLowerCase().includes(q) ||
+        donation.description.toLowerCase().includes(q) ||
+        donation.category.toLowerCase().includes(q) ||
+        (donation.subcategory?.toLowerCase?.().includes(q))
       );
     }
 
@@ -117,9 +144,6 @@ const HomeScreen = ({ navigation }) => {
 
     try {
       const currentUser = auth.currentUser;
-      console.log('Requesting item - Current user:', currentUser?.uid);
-      console.log('Donation donorId:', donation.donorId);
-      
       if (!currentUser) {
         Alert.alert('Error', 'Please sign in to request items');
         return;
@@ -133,24 +157,16 @@ const HomeScreen = ({ navigation }) => {
 
       // Check if already requested
       const isAlreadyRequested = donation.requestedBy && donation.requestedBy.includes(currentUser.uid);
-      console.log('Already requested:', isAlreadyRequested);
-      console.log('Current requestedBy array:', donation.requestedBy);
       
       if (isAlreadyRequested) {
         // Cancel request
         const donationRef = doc(db, 'donations', donation.id);
-        await updateDoc(donationRef, {
-          requestedBy: arrayRemove(currentUser.uid)
-        });
-        console.log('Request cancelled for user:', currentUser.uid);
+        await updateDoc(donationRef, { requestedBy: arrayRemove(currentUser.uid) });
         Alert.alert('Request Cancelled', 'Your request has been cancelled');
       } else {
         // Add request
         const donationRef = doc(db, 'donations', donation.id);
-        await updateDoc(donationRef, {
-          requestedBy: arrayUnion(currentUser.uid)
-        });
-        console.log('Request added for user:', currentUser.uid);
+        await updateDoc(donationRef, { requestedBy: arrayUnion(currentUser.uid) });
         Alert.alert('Request Sent', `Your request for "${donation.title}" has been sent to the donor`);
       }
 
@@ -162,6 +178,36 @@ const HomeScreen = ({ navigation }) => {
     }
   };
 
+  const onPressCategory = (parent) => {
+    if (parent === 'All') {
+      setSelectedCategory('All');
+      setSelectedSubcategory(null);
+      setOpenDropdownFor(null);
+      return;
+    }
+    setSelectedCategory(parent);
+    setSelectedSubcategory(null);
+    setOpenDropdownFor((prev) => (prev === parent ? null : parent));
+  };
+
+  const onSelectSubcategory = (sub) => {
+    setSelectedSubcategory(sub);
+    setOpenDropdownFor(null);
+  };
+
+  const renderCategoryChip = (parent) => (
+    <View key={parent} style={styles.categoryGroup}>
+      <TouchableOpacity
+        style={[styles.categoryButton, selectedCategory === parent && styles.selectedCategoryButton]}
+        onPress={() => onPressCategory(parent)}
+      >
+        <Text style={[styles.categoryButtonText, selectedCategory === parent && styles.selectedCategoryButtonText]}>
+          {parent}
+        </Text>
+      </TouchableOpacity>
+    </View>
+  );
+
   const renderDonationItem = ({ item }) => (
     <DonationCard
       donation={item}
@@ -171,25 +217,6 @@ const HomeScreen = ({ navigation }) => {
     />
   );
 
-  const renderCategoryItem = ({ item }) => (
-    <TouchableOpacity
-      style={[
-        styles.categoryButton,
-        selectedCategory === item && styles.selectedCategoryButton,
-      ]}
-      onPress={() => setSelectedCategory(item)}
-    >
-      <Text
-        style={[
-          styles.categoryButtonText,
-          selectedCategory === item && styles.selectedCategoryButtonText,
-        ]}
-      >
-        {item}
-      </Text>
-    </TouchableOpacity>
-  );
-
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
@@ -197,6 +224,8 @@ const HomeScreen = ({ navigation }) => {
       </View>
     );
   }
+
+  const openSubs = openDropdownFor && CATEGORY_TREE[openDropdownFor];
 
   return (
     <View style={styles.container}>
@@ -219,16 +248,54 @@ const HomeScreen = ({ navigation }) => {
         />
       </View>
 
-      {/* Categories */}
+      {/* Categories with dropdown */}
       <View style={styles.categoriesContainer}>
         <FlatList
-          data={CATEGORIES}
-          renderItem={renderCategoryItem}
+          data={MAIN_CATEGORIES}
+          renderItem={({ item }) => (
+            item === 'All' ? (
+              <TouchableOpacity
+                style={[styles.categoryButton, selectedCategory === 'All' && styles.selectedCategoryButton]}
+                onPress={() => onPressCategory('All')}
+              >
+                <Text style={[styles.categoryButtonText, selectedCategory === 'All' && styles.selectedCategoryButtonText]}>All</Text>
+              </TouchableOpacity>
+            ) : (
+              renderCategoryChip(item)
+            )
+          )}
           keyExtractor={(item) => item}
           horizontal
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={styles.categoriesList}
         />
+
+        {openSubs && (
+          <View style={styles.subcategoriesContainer}>
+            {openSubs.map((sub) => (
+              <TouchableOpacity
+                key={sub}
+                style={[styles.subcategoryChip, selectedSubcategory === sub && styles.subcategoryChipSelected]}
+                onPress={() => onSelectSubcategory(sub)}
+              >
+                <Text style={[styles.subcategoryText, selectedSubcategory === sub && styles.subcategoryTextSelected]}>
+                  {sub}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        )}
+
+        {selectedCategory !== 'All' && selectedSubcategory && (
+          <View style={styles.currentFilterBar}>
+            <Text style={styles.currentFilterText}>
+              Filtering by: {selectedCategory} → {selectedSubcategory}
+            </Text>
+            <TouchableOpacity onPress={() => { setSelectedSubcategory(null); }}>
+              <Text style={styles.clearFilterText}>Clear subcategory</Text>
+            </TouchableOpacity>
+          </View>
+        )}
       </View>
 
       {/* Donations List */}
@@ -243,7 +310,7 @@ const HomeScreen = ({ navigation }) => {
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
             <Text style={styles.emptyText}>
-              {searchQuery || selectedCategory !== 'All'
+              {searchQuery || selectedCategory !== 'All' || selectedSubcategory
                 ? 'No donations found matching your criteria'
                 : 'No donations available yet'}
             </Text>
@@ -257,69 +324,114 @@ const HomeScreen = ({ navigation }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: theme.colors.background,
   },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#f5f5f5',
+    backgroundColor: theme.colors.background,
   },
   loadingText: {
     fontSize: 16,
-    color: '#666',
+    color: theme.colors.textSecondary,
   },
   anonymousBanner: {
-    backgroundColor: '#FFF3CD',
+    backgroundColor: theme.colors.chipBackground,
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#FFEAA7',
+    borderBottomColor: theme.colors.border,
   },
   anonymousBannerText: {
     fontSize: 14,
-    color: '#856404',
+    color: theme.colors.textPrimary,
     textAlign: 'center',
     fontWeight: '500',
   },
   searchContainer: {
     padding: 16,
-    backgroundColor: 'white',
+    backgroundColor: theme.colors.surface,
     borderBottomWidth: 1,
-    borderBottomColor: '#E5E5EA',
+    borderBottomColor: theme.colors.border,
   },
   searchInput: {
-    backgroundColor: '#f5f5f5',
+    backgroundColor: theme.colors.background,
     borderRadius: 8,
     padding: 12,
     fontSize: 16,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    color: theme.colors.textPrimary,
   },
   categoriesContainer: {
-    backgroundColor: 'white',
+    backgroundColor: theme.colors.surface,
     borderBottomWidth: 1,
-    borderBottomColor: '#E5E5EA',
+    borderBottomColor: theme.colors.border,
   },
   categoriesList: {
     paddingHorizontal: 16,
     paddingVertical: 12,
   },
+  categoryGroup: {
+    marginRight: 8,
+  },
   categoryButton: {
     paddingHorizontal: 16,
     paddingVertical: 8,
-    marginRight: 8,
     borderRadius: 20,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: theme.colors.chipBackground,
   },
   selectedCategoryButton: {
-    backgroundColor: '#007AFF',
+    backgroundColor: theme.colors.chipSelectedBackground,
   },
   categoryButtonText: {
     fontSize: 14,
-    color: '#666',
+    color: theme.colors.textSecondary,
     fontWeight: '500',
   },
   selectedCategoryButtonText: {
-    color: 'white',
+    color: theme.colors.chipSelectedText,
+  },
+  subcategoriesContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    paddingHorizontal: 16,
+    paddingBottom: 8,
+  },
+  subcategoryChip: {
+    backgroundColor: theme.colors.chipBackground,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+  },
+  subcategoryChipSelected: {
+    backgroundColor: theme.colors.primary,
+    borderColor: theme.colors.primary,
+  },
+  subcategoryText: {
+    fontSize: 13,
+    color: theme.colors.textPrimary,
+  },
+  subcategoryTextSelected: {
+    color: theme.colors.chipSelectedText,
+    fontWeight: '600',
+  },
+  currentFilterBar: {
+    paddingHorizontal: 16,
+    paddingBottom: 8,
+  },
+  currentFilterText: {
+    fontSize: 13,
+    color: theme.colors.textSecondary,
+  },
+  clearFilterText: {
+    fontSize: 13,
+    color: theme.colors.accent,
+    marginTop: 4,
   },
   donationsList: {
     paddingVertical: 8,
@@ -332,7 +444,7 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     fontSize: 16,
-    color: '#666',
+    color: theme.colors.textSecondary,
     textAlign: 'center',
   },
 });

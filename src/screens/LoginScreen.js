@@ -11,6 +11,7 @@ import {
     TouchableOpacity,
     View,
 } from 'react-native';
+import { theme } from '../../constants/theme';
 import { auth } from '../config/firebase';
 
 const LoginScreen = ({ navigation }) => {
@@ -62,6 +63,7 @@ const LoginScreen = ({ navigation }) => {
           <TextInput
             style={styles.input}
             placeholder="Email"
+            placeholderTextColor={theme.colors.textSecondary}
             value={email}
             onChangeText={setEmail}
             keyboardType="email-address"
@@ -72,6 +74,7 @@ const LoginScreen = ({ navigation }) => {
           <TextInput
             style={styles.input}
             placeholder="Password"
+            placeholderTextColor={theme.colors.textSecondary}
             value={password}
             onChangeText={setPassword}
             secureTextEntry
@@ -100,8 +103,14 @@ const LoginScreen = ({ navigation }) => {
 
         <View style={styles.footer}>
           <Text style={styles.footerText}>Don't have an account? </Text>
-          <TouchableOpacity onPress={() => navigation.navigate('Register')}>
+          <TouchableOpacity onPress={() => navigation.navigate('Signup')}>
             <Text style={styles.linkText}>Sign Up</Text>
+          </TouchableOpacity>
+        </View>
+
+        <View style={styles.backToWelcome}>
+          <TouchableOpacity onPress={() => navigation.navigate('Welcome')}>
+            <Text style={styles.backToWelcomeText}>← Back to Welcome</Text>
           </TouchableOpacity>
         </View>
       </ScrollView>
@@ -112,7 +121,7 @@ const LoginScreen = ({ navigation }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: theme.colors.background,
   },
   scrollContainer: {
     flexGrow: 1,
@@ -126,37 +135,39 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 28,
     fontWeight: 'bold',
-    color: '#333',
+    color: theme.colors.textPrimary,
     marginBottom: 8,
   },
   subtitle: {
     fontSize: 16,
-    color: '#666',
+    color: theme.colors.textSecondary,
   },
   form: {
     marginBottom: 30,
   },
   input: {
-    backgroundColor: 'white',
+    backgroundColor: theme.colors.surface,
     borderRadius: 8,
     padding: 16,
     marginBottom: 16,
     fontSize: 16,
     borderWidth: 1,
-    borderColor: '#E5E5EA',
+    borderColor: theme.colors.border,
+    color: theme.colors.textPrimary,
   },
   button: {
-    backgroundColor: '#007AFF',
+    backgroundColor: theme.colors.primary,
     borderRadius: 8,
     padding: 16,
     alignItems: 'center',
     marginBottom: 12,
+    ...theme.shadows.card,
   },
   buttonDisabled: {
-    backgroundColor: '#B0B0B0',
+    backgroundColor: theme.colors.muted,
   },
   buttonText: {
-    color: 'white',
+    color: theme.colors.surface,
     fontSize: 16,
     fontWeight: '600',
   },
@@ -166,10 +177,11 @@ const styles = StyleSheet.create({
     padding: 16,
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#007AFF',
+    borderColor: theme.colors.primary,
+    marginBottom: 8,
   },
   anonymousButtonText: {
-    color: '#007AFF',
+    color: theme.colors.primary,
     fontSize: 16,
     fontWeight: '600',
   },
@@ -177,15 +189,24 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
+    marginTop: 20,
   },
   footerText: {
     fontSize: 16,
-    color: '#666',
+    color: theme.colors.textSecondary,
   },
   linkText: {
     fontSize: 16,
-    color: '#007AFF',
+    color: theme.colors.primary,
     fontWeight: '600',
+  },
+  backToWelcome: {
+    marginTop: 20,
+    alignItems: 'center',
+  },
+  backToWelcomeText: {
+    fontSize: 14,
+    color: theme.colors.textSecondary,
   },
 });
 

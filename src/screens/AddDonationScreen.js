@@ -14,22 +14,57 @@ import {
     TouchableOpacity,
     View,
 } from 'react-native';
+import theme from '../../constants/theme';
 import { auth, db } from '../config/firebase';
 
-const CATEGORIES = [
-  'Electronics',
-  'Furniture',
-  'Clothing',
-  'Books',
-  'Kitchen',
-  'Sports',
-  'Other',
-];
+const CATEGORY_TREE = {
+  'Clothes': [
+    'Shirts', 'T-shirts', 'Shorts', 'Pants', 'Skirts', 'Dress', 'Night suit',
+    'Jackets', 'Hoodies', 'Woolens', 'Gym wear', 'Others'
+  ],
+  'Shoes, accessories': [
+    'Formal shoes', 'Sports shoes', 'Sandals', 'Slippers', 'Watch', 'Jewellery'
+  ],
+  'Toiletries': [
+    'Soap', 'Shampoo conditioner', 'Toothpaste', 'Toothbrush', 'Hairbrush',
+    'Moisturizer cream', 'Deodorant', 'Makeup kit', 'Makeup remover',
+    'Sunscreen', 'Razor', 'Shaving gel', 'Others'
+  ],
+  'Electric and Electronics': [
+    'Phone', 'Computer', 'Laptop', 'Microwave', 'Lamp', 'Table fan',
+    'Mixer grinder', 'Others'
+  ],
+  'Food (dry or packaged only)': [
+    'Spices', 'Dals', 'Atta', 'Rice', 'Health snacks', 'Sweets', 'Chocolate',
+    'Cookies', 'Chips', 'Others'
+  ],
+  'Sports': [
+    'Cricket bat/ ball set', 'Football', 'Basketball', 'Hockey', 'Tennis', 'Others'
+  ],
+  'Toys': [
+    'Puzzles', 'Building blocks', 'Board games', 'Soft toys', 'Bath toys',
+    'Play dough', 'Kitchen set', 'Figurines', 'Dolls', 'Cars , other vehicles',
+    'Others'
+  ],
+  'Furniture and furnishing': [
+    'Chairs', 'Dining Table', 'Study table', 'Side table', 'Cabinet', 'Curtains',
+    'Bed', 'Mattress', 'Others'
+  ],
+  'Kitchen stuff': [
+    'Pans', 'Pots', 'Pressure cooker', 'Tawa', 'Wok', 'Spice jars',
+    'Water bottle', 'Water Jugs', 'Plates', 'Glasses', 'Crockery', 'Cutlery',
+    'Others'
+  ],
+  'Others': ['Others']
+};
+
+const MAIN_CATEGORIES = Object.keys(CATEGORY_TREE);
 
 const AddDonationScreen = ({ navigation }) => {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
-  const [category, setCategory] = useState('Electronics');
+  const [category, setCategory] = useState(MAIN_CATEGORIES[0]);
+  const [subcategory, setSubcategory] = useState(CATEGORY_TREE[MAIN_CATEGORIES[0]][0]);
   const [image, setImage] = useState(null);
   const [loading, setLoading] = useState(false);
 
@@ -87,9 +122,6 @@ const AddDonationScreen = ({ navigation }) => {
     setLoading(true);
     try {
       const currentUser = auth.currentUser;
-      console.log('Current user when adding donation:', currentUser?.uid);
-      console.log('Current user email:', currentUser?.email);
-      
       if (!currentUser) {
         Alert.alert('Error', 'Please sign in to add donations');
         return;
@@ -102,21 +134,14 @@ const AddDonationScreen = ({ navigation }) => {
         title: title.trim(),
         description: description.trim(),
         category,
+        subcategory,
         imageUrl: imageBase64, // Store Base64 string instead of URL
         donorId: currentUser.uid,
         requestedBy: [],
         createdAt: new Date(),
       };
 
-      console.log('Saving donation with data:', {
-        title: donationData.title,
-        donorId: donationData.donorId,
-        category: donationData.category
-      });
-
-      // Add donation to Firestore
       const docRef = await addDoc(collection(db, 'donations'), donationData);
-      console.log('Donation saved with ID:', docRef.id);
 
       Alert.alert('Success', 'Donation added successfully!', [
         { text: 'OK', onPress: () => navigation.goBack() },
@@ -127,6 +152,12 @@ const AddDonationScreen = ({ navigation }) => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const onCategoryChange = (newCategory) => {
+    setCategory(newCategory);
+    const firstSub = CATEGORY_TREE[newCategory][0];
+    setSubcategory(firstSub);
   };
 
   // Show restricted message for anonymous users
@@ -192,11 +223,25 @@ const AddDonationScreen = ({ navigation }) => {
             <Text style={styles.label}>Category *</Text>
             <Picker
               selectedValue={category}
-              onValueChange={setCategory}
+              onValueChange={onCategoryChange}
               style={styles.picker}
             >
-              {CATEGORIES.map((cat) => (
+              {MAIN_CATEGORIES.map((cat) => (
                 <Picker.Item key={cat} label={cat} value={cat} />
+              ))}
+            </Picker>
+          </View>
+
+          {/* Subcategory Picker */}
+          <View style={styles.pickerContainer}>
+            <Text style={styles.label}>Subcategory *</Text>
+            <Picker
+              selectedValue={subcategory}
+              onValueChange={setSubcategory}
+              style={styles.picker}
+            >
+              {CATEGORY_TREE[category].map((sub) => (
+                <Picker.Item key={sub} label={sub} value={sub} />
               ))}
             </Picker>
           </View>
@@ -231,7 +276,7 @@ const AddDonationScreen = ({ navigation }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: theme.colors.background,
   },
   scrollContainer: {
     flexGrow: 1,
@@ -244,12 +289,12 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 28,
     fontWeight: 'bold',
-    color: '#333',
+    color: theme.colors.textPrimary,
     marginBottom: 8,
   },
   subtitle: {
     fontSize: 16,
-    color: '#666',
+    color: theme.colors.textSecondary,
     textAlign: 'center',
   },
   form: {
@@ -261,17 +306,17 @@ const styles = StyleSheet.create({
   imagePlaceholder: {
     width: '100%',
     height: 200,
-    backgroundColor: '#E5E5EA',
+    backgroundColor: theme.colors.background,
     borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 2,
-    borderColor: '#D1D1D6',
+    borderColor: theme.colors.border,
     borderStyle: 'dashed',
   },
   imagePlaceholderText: {
     fontSize: 16,
-    color: '#8E8E93',
+    color: theme.colors.textSecondary,
   },
   selectedImage: {
     width: '100%',
@@ -279,28 +324,29 @@ const styles = StyleSheet.create({
     borderRadius: 12,
   },
   input: {
-    backgroundColor: 'white',
+    backgroundColor: theme.colors.surface,
     borderRadius: 8,
     padding: 16,
     marginBottom: 16,
     fontSize: 16,
     borderWidth: 1,
-    borderColor: '#E5E5EA',
+    borderColor: theme.colors.border,
+    color: theme.colors.textPrimary,
   },
   textArea: {
     height: 100,
     textAlignVertical: 'top',
   },
   pickerContainer: {
-    backgroundColor: 'white',
+    backgroundColor: theme.colors.surface,
     borderRadius: 8,
     marginBottom: 16,
     borderWidth: 1,
-    borderColor: '#E5E5EA',
+    borderColor: theme.colors.border,
   },
   label: {
     fontSize: 16,
-    color: '#333',
+    color: theme.colors.textPrimary,
     paddingHorizontal: 16,
     paddingTop: 16,
     paddingBottom: 8,
@@ -309,14 +355,14 @@ const styles = StyleSheet.create({
     height: 50,
   },
   button: {
-    backgroundColor: '#007AFF',
+    backgroundColor: theme.colors.primary,
     borderRadius: 8,
     padding: 16,
     alignItems: 'center',
     marginTop: 20,
   },
   buttonDisabled: {
-    backgroundColor: '#B0B0B0',
+    backgroundColor: theme.colors.muted,
   },
   buttonText: {
     color: 'white',
@@ -334,7 +380,7 @@ const styles = StyleSheet.create({
     width: 80,
     height: 80,
     borderRadius: 40,
-    backgroundColor: '#F8D7DA',
+    backgroundColor: theme.colors.chipBackground,
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 20,
@@ -345,19 +391,19 @@ const styles = StyleSheet.create({
   restrictedTitle: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#721C24',
+    color: theme.colors.textPrimary,
     marginBottom: 16,
     textAlign: 'center',
   },
   restrictedMessage: {
     fontSize: 16,
-    color: '#721C24',
+    color: theme.colors.textSecondary,
     textAlign: 'center',
     lineHeight: 24,
     marginBottom: 30,
   },
   signUpButton: {
-    backgroundColor: '#007AFF',
+    backgroundColor: theme.colors.primary,
     borderRadius: 8,
     paddingHorizontal: 24,
     paddingVertical: 12,
