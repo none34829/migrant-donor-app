@@ -19,6 +19,7 @@ const DonationCard = ({ donation, onPress, onRequest, isAnonymous = false }) => 
   // Check if current user has requested this item
   const currentUser = auth.currentUser;
   const isRequested = donation.requestedBy && currentUser && donation.requestedBy.includes(currentUser.uid);
+  const isAccepted = donation.acceptedRequests && currentUser && donation.acceptedRequests.includes(currentUser.uid);
   const isOwnDonation = donation.donorId === currentUser?.uid;
 
   const handleImageError = () => {
@@ -49,6 +50,23 @@ const DonationCard = ({ donation, onPress, onRequest, isAnonymous = false }) => 
         <Text style={styles.description} numberOfLines={2}>
           {donation.description}
         </Text>
+        
+        {/* Show request status for requested items */}
+        {isRequested && !isOwnDonation && (
+          <View style={styles.requestStatusContainer}>
+            {isAccepted ? (
+              <View style={styles.acceptedStatus}>
+                <Ionicons name="checkmark-circle" size={16} color="#4CAF50" />
+                <Text style={styles.acceptedStatusText}>Request Accepted</Text>
+              </View>
+            ) : (
+              <View style={styles.pendingStatus}>
+                <Ionicons name="time-outline" size={16} color="#FF9800" />
+                <Text style={styles.pendingStatusText}>Request Pending</Text>
+              </View>
+            )}
+          </View>
+        )}
         
         {onRequest && !isOwnDonation && (
           <TouchableOpacity
@@ -142,6 +160,37 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: theme.colors.textSecondary,
     marginBottom: 12,
+  },
+  requestStatusContainer: {
+    marginBottom: 12,
+  },
+  acceptedStatus: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#E8F5E9',
+    borderRadius: 8,
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+  },
+  acceptedStatusText: {
+    fontSize: 12,
+    color: '#4CAF50',
+    marginLeft: 6,
+    fontWeight: '600',
+  },
+  pendingStatus: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFF3E0',
+    borderRadius: 8,
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+  },
+  pendingStatusText: {
+    fontSize: 12,
+    color: '#FF9800',
+    marginLeft: 6,
+    fontWeight: '600',
   },
   requestButton: {
     backgroundColor: theme.colors.primary,

@@ -3,12 +3,14 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import React from 'react';
 import { auth } from '../config/firebase';
+import AcceptedRequestsScreen from '../screens/AcceptedRequestsScreen';
 import AddDonationScreen from '../screens/AddDonationScreen';
 import DonationDetailScreen from '../screens/DonationDetailScreen';
 import DonationRequestsScreen from '../screens/DonationRequestsScreen';
 import HomeScreen from '../screens/HomeScreen';
 import MyDonationsScreen from '../screens/MyDonationsScreen';
 import MyRequestsScreen from '../screens/MyRequestsScreen';
+import NotificationsScreen from '../screens/NotificationsScreen';
 import ProfileScreen from '../screens/ProfileScreen';
 
 const Tab = createBottomTabNavigator();
@@ -73,6 +75,11 @@ export default function AppNavigator() {
         options={{ title: 'Requests' }}
       />
       <Stack.Screen 
+        name="AcceptedRequests" 
+        component={AcceptedRequestsScreen}
+        options={{ title: 'Accepted Requests' }}
+      />
+      <Stack.Screen 
         name="MyDonations" 
         component={MyDonationsScreen}
         options={{ title: 'My Donations' }}
@@ -81,6 +88,11 @@ export default function AppNavigator() {
         name="MyRequests" 
         component={MyRequestsScreen}
         options={{ title: 'My Requests' }}
+      />
+      <Stack.Screen 
+        name="Notifications" 
+        component={NotificationsScreen}
+        options={{ title: 'Notifications' }}
       />
     </Stack.Navigator>
   );

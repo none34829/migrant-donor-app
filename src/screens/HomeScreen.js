@@ -2,18 +2,19 @@ import { useFocusEffect } from '@react-navigation/native';
 import { arrayRemove, arrayUnion, collection, doc, getDocs, orderBy, query, updateDoc } from 'firebase/firestore';
 import React, { useEffect, useState } from 'react';
 import {
-  Alert,
-  FlatList,
-  RefreshControl,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
+    Alert,
+    FlatList,
+    RefreshControl,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from 'react-native';
 import theme from '../../constants/theme';
 import DonationCard from '../components/DonationCard';
 import { auth, db } from '../config/firebase';
+import { sendNotificationToUser } from '../services/notificationService';
 
 const CATEGORY_TREE = {
   'Clothes': [
@@ -158,17 +159,37 @@ const HomeScreen = ({ navigation }) => {
       // Check if already requested
       const isAlreadyRequested = donation.requestedBy && donation.requestedBy.includes(currentUser.uid);
       
-      if (isAlreadyRequested) {
-        // Cancel request
-        const donationRef = doc(db, 'donations', donation.id);
-        await updateDoc(donationRef, { requestedBy: arrayRemove(currentUser.uid) });
-        Alert.alert('Request Cancelled', 'Your request has been cancelled');
-      } else {
-        // Add request
-        const donationRef = doc(db, 'donations', donation.id);
-        await updateDoc(donationRef, { requestedBy: arrayUnion(currentUser.uid) });
-        Alert.alert('Request Sent', `Your request for "${donation.title}" has been sent to the donor`);
-      }
+              if (isAlreadyRequested) {
+          // Cancel request
+          const donationRef = doc(db, 'donations', donation.id);
+          await updateDoc(donationRef, { requestedBy: arrayRemove(currentUser.uid) });
+          
+          // Send notification to donor about cancelled request
+          await sendNotificationToUser(
+            donation.donorId,
+            'Request Cancelled',
+            `${currentUser.displayName || 'Someone'} cancelled their request for "${donation.title}"`,
+            'request_cancelled',
+            donation.id
+          );
+          
+          Alert.alert('Request Cancelled', 'Your request has been cancelled');
+        } else {
+          // Add request
+          const donationRef = doc(db, 'donations', donation.id);
+          await updateDoc(donationRef, { requestedBy: arrayUnion(currentUser.uid) });
+          
+          // Send notification to donor about new request
+          await sendNotificationToUser(
+            donation.donorId,
+            'New Request Received! 📬',
+            `${currentUser.displayName || 'Someone'} has requested "${donation.title}"`,
+            'request_received',
+            donation.id
+          );
+          
+          Alert.alert('Request Sent', `Your request for "${donation.title}" has been sent to the donor`);
+        }
 
       // Refresh the donations list
       fetchDonations();

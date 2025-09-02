@@ -19,6 +19,7 @@ const DonationDetailScreen = ({ route, navigation }) => {
   const [donorInfo, setDonorInfo] = useState(null);
   const [loading, setLoading] = useState(false);
   const [isRequested, setIsRequested] = useState(false);
+  const [isAccepted, setIsAccepted] = useState(false);
 
   const currentUser = auth.currentUser;
   const isAnonymous = currentUser?.isAnonymous;
@@ -43,6 +44,10 @@ const DonationDetailScreen = ({ route, navigation }) => {
   const checkRequestStatus = () => {
     if (donation.requestedBy && currentUser) {
       setIsRequested(donation.requestedBy.includes(currentUser.uid));
+      // Check if request is accepted
+      if (donation.acceptedRequests && donation.acceptedRequests.includes(currentUser.uid)) {
+        setIsAccepted(true);
+      }
     }
   };
 
@@ -114,11 +119,34 @@ const DonationDetailScreen = ({ route, navigation }) => {
             <Text style={styles.sectionTitle}>Donor Information</Text>
             <View style={styles.donorInfo}>
               <Text style={styles.donorName}>{donorInfo.name}</Text>
-              {donorInfo.contact && (
+              
+              {/* Show contact info only if request is accepted or if it's own donation */}
+              {(isAccepted || isOwnDonation) && donorInfo.contact && (
                 <Text style={styles.donorContact}>Contact: {donorInfo.contact}</Text>
               )}
-              {donorInfo.address && (
+              
+              {(isAccepted || isOwnDonation) && donorInfo.address && (
                 <Text style={styles.donorAddress}>Location: {donorInfo.address}</Text>
+              )}
+
+              {/* Show privacy notice if requested but not accepted */}
+              {isRequested && !isAccepted && !isOwnDonation && (
+                <View style={styles.privacyNotice}>
+                  <Ionicons name="lock-closed-outline" size={16} color="#FF9800" />
+                  <Text style={styles.privacyText}>
+                    Contact information will be revealed after the donor accepts your request
+                  </Text>
+                </View>
+              )}
+
+              {/* Show status if request is accepted */}
+              {isAccepted && (
+                <View style={styles.acceptedNotice}>
+                  <Ionicons name="checkmark-circle" size={16} color="#4CAF50" />
+                  <Text style={styles.acceptedText}>
+                    Your request has been accepted! You can now contact the donor.
+                  </Text>
+                </View>
               )}
             </View>
           </View>
@@ -336,6 +364,36 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
     textAlign: 'center',
+  },
+  privacyNotice: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 12,
+    backgroundColor: '#FFF3E0',
+    borderRadius: 8,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+  },
+  privacyText: {
+    fontSize: 12,
+    color: '#FF9800',
+    marginLeft: 8,
+    flex: 1,
+  },
+  acceptedNotice: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 12,
+    backgroundColor: '#E8F5E9',
+    borderRadius: 8,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+  },
+  acceptedText: {
+    fontSize: 12,
+    color: '#4CAF50',
+    marginLeft: 8,
+    flex: 1,
   },
 });
 

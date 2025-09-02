@@ -2,17 +2,18 @@ import { signOut } from 'firebase/auth';
 import { doc, getDoc, updateDoc } from 'firebase/firestore';
 import React, { useEffect, useState } from 'react';
 import {
-  Alert,
-  ScrollView,
-  StyleSheet,
-  Switch,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
+    Alert,
+    ScrollView,
+    StyleSheet,
+    Switch,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from 'react-native';
 import theme from '../../constants/theme';
 import { auth, db } from '../config/firebase';
+import { requestNotificationPermissions } from '../services/notificationService';
 
 const ProfileScreen = ({ navigation }) => {
   const [user, setUser] = useState(null);
@@ -23,6 +24,7 @@ const ProfileScreen = ({ navigation }) => {
   const [address, setAddress] = useState('');
   const [anonymous, setAnonymous] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [notificationPermission, setNotificationPermission] = useState(false);
 
   // Check if current user is anonymous
   const isAnonymous = auth.currentUser?.isAnonymous;
@@ -61,6 +63,29 @@ const ProfileScreen = ({ navigation }) => {
       console.error('Error fetching profile:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleNotificationPermission = async () => {
+    try {
+      const token = await requestNotificationPermissions();
+      if (token) {
+        setNotificationPermission(true);
+        Alert.alert(
+          'Notifications Enabled! 🔔',
+          'You will now receive push notifications for requests, acceptances, and other important updates.',
+          [{ text: 'Great!' }]
+        );
+      } else {
+        Alert.alert(
+          'Permission Denied',
+          'Push notifications are disabled. You can still receive in-app notifications.',
+          [{ text: 'OK' }]
+        );
+      }
+    } catch (error) {
+      console.error('Error requesting notification permissions:', error);
+      Alert.alert('Error', 'Failed to enable notifications');
     }
   };
 
@@ -207,6 +232,26 @@ const ProfileScreen = ({ navigation }) => {
             <Text style={styles.saveButtonText}>{saving ? 'Saving...' : 'Save Changes'}</Text>
           </TouchableOpacity>
         )}
+
+        {!isAnonymous && (
+          <View style={styles.notificationSection}>
+            <Text style={styles.sectionTitle}>Notifications</Text>
+            <TouchableOpacity
+              style={[styles.notificationButton, notificationPermission && styles.notificationEnabled]}
+              onPress={handleNotificationPermission}
+            >
+              <Text style={[styles.notificationButtonText, notificationPermission && styles.notificationEnabledText]}>
+                {notificationPermission ? '🔔 Notifications Enabled' : '🔕 Enable Push Notifications'}
+              </Text>
+            </TouchableOpacity>
+            <Text style={styles.notificationInfo}>
+              {notificationPermission 
+                ? 'You will receive push notifications for important updates.'
+                : 'Enable push notifications to stay updated about requests and acceptances.'
+              }
+            </Text>
+          </View>
+        )}
       </View>
 
       <View style={styles.actionsSection}>
@@ -224,6 +269,14 @@ const ProfileScreen = ({ navigation }) => {
           disabled={isAnonymous}
         >
           <Text style={[styles.actionButtonText, isAnonymous && styles.disabledButtonText]}>My Requests</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[styles.actionButton, isAnonymous && styles.disabledButton]}
+          onPress={() => (isAnonymous ? Alert.alert('Restricted', 'Accepted Requests is not available for anonymous users.') : navigation.navigate('AcceptedRequests'))}
+          disabled={isAnonymous}
+        >
+          <Text style={[styles.actionButtonText, isAnonymous && styles.disabledButtonText]}>Accepted Requests</Text>
         </TouchableOpacity>
 
         <TouchableOpacity style={[styles.actionButton, styles.signOutButton]} onPress={handleSignOut}>
@@ -404,6 +457,38 @@ const styles = StyleSheet.create({
   },
   signOutButtonText: {
     color: 'white',
+  },
+  notificationSection: {
+    marginTop: 20,
+    padding: 16,
+    backgroundColor: theme.colors.surface,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+  },
+  notificationButton: {
+    backgroundColor: theme.colors.primary,
+    borderRadius: 8,
+    padding: 16,
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  notificationEnabled: {
+    backgroundColor: theme.colors.success,
+  },
+  notificationButtonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  notificationEnabledText: {
+    color: 'white',
+  },
+  notificationInfo: {
+    fontSize: 14,
+    color: theme.colors.textSecondary,
+    textAlign: 'center',
+    lineHeight: 20,
   },
 });
 

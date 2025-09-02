@@ -104,8 +104,12 @@ const MyRequestsScreen = ({ navigation }) => {
               }
 
               const donationRef = doc(db, 'donations', donation.id);
+              const acceptedRequests = donation.acceptedRequests || [];
+              
+              // Remove from both requestedBy and acceptedRequests
               await updateDoc(donationRef, {
-                requestedBy: arrayRemove(currentUser.uid)
+                requestedBy: arrayRemove(currentUser.uid),
+                acceptedRequests: acceptedRequests.filter(id => id !== currentUser.uid)
               });
               
               Alert.alert('Request Cancelled', 'Your request has been cancelled');

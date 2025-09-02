@@ -16,6 +16,7 @@ import {
 } from 'react-native';
 import theme from '../../constants/theme';
 import { auth, db } from '../config/firebase';
+import { sendNotificationToUser } from '../services/notificationService';
 
 const CATEGORY_TREE = {
   'Clothes': [
@@ -141,11 +142,20 @@ const AddDonationScreen = ({ navigation }) => {
         createdAt: new Date(),
       };
 
-      const docRef = await addDoc(collection(db, 'donations'), donationData);
+              const docRef = await addDoc(collection(db, 'donations'), donationData);
 
-      Alert.alert('Success', 'Donation added successfully!', [
-        { text: 'OK', onPress: () => navigation.goBack() },
-      ]);
+        // Send notification to the donor about successful donation
+        await sendNotificationToUser(
+          currentUser.uid,
+          'Donation Added Successfully! 🎉',
+          `Your donation "${title.trim()}" has been added to the community. People can now request it!`,
+          'donation_added',
+          docRef.id
+        );
+
+        Alert.alert('Success', 'Donation added successfully!', [
+          { text: 'OK', onPress: () => navigation.goBack() },
+        ]);
     } catch (error) {
       console.error('Error adding donation:', error);
       Alert.alert('Error', 'Failed to add donation: ' + error.message);
