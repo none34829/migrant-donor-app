@@ -56,7 +56,7 @@ A cross-platform mobile application that connects donors and migrant workers, en
 
 ### 1. Clone the Repository
 ```bash
-git clone <repository-url>
+git clone https://github.com/none34829/migrant-donor-app.git
 cd migrant-donor-app
 ```
 
