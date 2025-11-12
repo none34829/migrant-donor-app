@@ -1,10 +1,13 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { onAuthStateChanged } from 'firebase/auth';
+import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
+import theme from './constants/theme';
+import { AppDataProvider } from './src/context/AppDataContext';
+import { AuthFlowProvider } from './src/context/AuthFlowContext';
 import { auth } from './src/config/firebase';
-import AuthNavigator from './src/navigation/AuthNavigator';
 import AppNavigator from './src/navigation/AppNavigator';
-import { View, Text, ActivityIndicator, StyleSheet } from 'react-native';
+import AuthNavigator from './src/navigation/AuthNavigator';
 
 export default function App() {
   const [user, setUser] = useState(null);
@@ -22,16 +25,18 @@ export default function App() {
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#007AFF" />
+        <ActivityIndicator size="large" color={theme.colors.primary} />
         <Text style={styles.loadingText}>Loading...</Text>
       </View>
     );
   }
 
   return (
-    <NavigationContainer>
-      {user ? <AppNavigator /> : <AuthNavigator />}
-    </NavigationContainer>
+    <AuthFlowProvider>
+      <AppDataProvider>
+        <NavigationContainer>{user ? <AppNavigator /> : <AuthNavigator />}</NavigationContainer>
+      </AppDataProvider>
+    </AuthFlowProvider>
   );
 }
 
@@ -40,11 +45,11 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#f5f5f5',
+    backgroundColor: theme.colors.background,
   },
   loadingText: {
     marginTop: 16,
     fontSize: 16,
-    color: '#666',
+    color: theme.colors.textSecondary,
   },
-}); 
+});

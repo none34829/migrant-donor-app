@@ -1,213 +1,94 @@
-import { signInAnonymously, signInWithEmailAndPassword } from 'firebase/auth';
+import { signInWithEmailAndPassword } from 'firebase/auth';
 import React, { useState } from 'react';
-import {
-    Alert,
-    KeyboardAvoidingView,
-    Platform,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
-} from 'react-native';
-import { theme } from '../../constants/theme';
+import { StyleSheet, Text, TextInput, View } from 'react-native';
+import theme from '../../constants/theme';
+import AuthLayout from '../components/AuthLayout';
+import { PrimaryButton, TextButton } from '../components/Buttons';
 import { auth } from '../config/firebase';
 
 const LoginScreen = ({ navigation }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
 
   const handleLogin = async () => {
     if (!email || !password) {
-      Alert.alert('Error', 'Please fill in all fields');
+      setError('Email and password are required.');
       return;
     }
-
+    setError('');
     setLoading(true);
     try {
-      await signInWithEmailAndPassword(auth, email, password);
-      // Navigation will be handled automatically by the auth state change
-    } catch (error) {
-      Alert.alert('Login Failed', error.message);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleAnonymousLogin = async () => {
-    setLoading(true);
-    try {
-      await signInAnonymously(auth);
-      // Navigation will be handled automatically by the auth state change
-    } catch (error) {
-      Alert.alert('Anonymous Login Failed', error.message);
+      await signInWithEmailAndPassword(auth, email.trim(), password);
+    } catch (err) {
+      setError(err.message ?? 'Unable to sign in');
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <KeyboardAvoidingView
-      style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+    <AuthLayout
+      title="Log in"
+      subtitle="Enter your details to continue."
+      footer={
+        <View style={styles.footerRow}>
+          <Text style={styles.footerText}>New here?</Text>
+          <TextButton label="Sign up" onPress={() => navigation.navigate('/auth/signup')} />
+        </View>
+      }
     >
-      <ScrollView contentContainerStyle={styles.scrollContainer}>
-        <View style={styles.header}>
-          <Text style={styles.title}>Welcome Back</Text>
-          <Text style={styles.subtitle}>Sign in to your account</Text>
-        </View>
-
-        <View style={styles.form}>
-          <TextInput
-            style={styles.input}
-            placeholder="Email"
-            placeholderTextColor={theme.colors.textSecondary}
-            value={email}
-            onChangeText={setEmail}
-            keyboardType="email-address"
-            autoCapitalize="none"
-            autoCorrect={false}
-          />
-
-          <TextInput
-            style={styles.input}
-            placeholder="Password"
-            placeholderTextColor={theme.colors.textSecondary}
-            value={password}
-            onChangeText={setPassword}
-            secureTextEntry
-            autoCapitalize="none"
-          />
-
-          <TouchableOpacity
-            style={[styles.button, loading && styles.buttonDisabled]}
-            onPress={handleLogin}
-            disabled={loading}
-          >
-            <Text style={styles.buttonText}>
-              {loading ? 'Signing In...' : 'Sign In'}
-            </Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.anonymousButton}
-            onPress={handleAnonymousLogin}
-          >
-            <Text style={styles.anonymousButtonText}>
-              Browse Anonymously
-            </Text>
-          </TouchableOpacity>
-        </View>
-
-        <View style={styles.footer}>
-          <Text style={styles.footerText}>Don't have an account? </Text>
-          <TouchableOpacity onPress={() => navigation.navigate('Signup')}>
-            <Text style={styles.linkText}>Sign Up</Text>
-          </TouchableOpacity>
-        </View>
-
-        <View style={styles.backToWelcome}>
-          <TouchableOpacity onPress={() => navigation.navigate('Welcome')}>
-            <Text style={styles.backToWelcomeText}>← Back to Welcome</Text>
-          </TouchableOpacity>
-        </View>
-      </ScrollView>
-    </KeyboardAvoidingView>
+      <View style={styles.form}>
+        <TextInput
+          style={styles.input}
+          placeholder="Email or username"
+          placeholderTextColor={theme.colors.textSecondary}
+          value={email}
+          onChangeText={setEmail}
+          keyboardType="email-address"
+          autoCapitalize="none"
+        />
+        <TextInput
+          style={styles.input}
+          placeholder="Password"
+          placeholderTextColor={theme.colors.textSecondary}
+          secureTextEntry
+          value={password}
+          onChangeText={setPassword}
+        />
+        {error ? <Text style={styles.error}>{error}</Text> : null}
+        <PrimaryButton label="Log in" onPress={handleLogin} loading={loading} />
+        <TextButton label="Forgot password?" onPress={() => navigation.navigate('/auth/forgot')} />
+      </View>
+    </AuthLayout>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: theme.colors.background,
-  },
-  scrollContainer: {
-    flexGrow: 1,
-    justifyContent: 'center',
-    padding: 20,
-  },
-  header: {
-    alignItems: 'center',
-    marginBottom: 40,
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: theme.colors.textPrimary,
-    marginBottom: 8,
-  },
-  subtitle: {
-    fontSize: 16,
-    color: theme.colors.textSecondary,
-  },
   form: {
-    marginBottom: 30,
+    gap: 16,
   },
   input: {
-    backgroundColor: theme.colors.surface,
-    borderRadius: 8,
-    padding: 16,
-    marginBottom: 16,
-    fontSize: 16,
     borderWidth: 1,
     borderColor: theme.colors.border,
+    borderRadius: 12,
+    padding: 16,
+    backgroundColor: theme.colors.surface,
     color: theme.colors.textPrimary,
   },
-  button: {
-    backgroundColor: theme.colors.primary,
-    borderRadius: 8,
-    padding: 16,
-    alignItems: 'center',
-    marginBottom: 12,
-    ...theme.shadows.card,
+  error: {
+    color: theme.colors.danger,
+    fontSize: 14,
   },
-  buttonDisabled: {
-    backgroundColor: theme.colors.muted,
-  },
-  buttonText: {
-    color: theme.colors.surface,
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  anonymousButton: {
-    backgroundColor: 'transparent',
-    borderRadius: 8,
-    padding: 16,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: theme.colors.primary,
-    marginBottom: 8,
-  },
-  anonymousButtonText: {
-    color: theme.colors.primary,
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  footer: {
+  footerRow: {
     flexDirection: 'row',
-    justifyContent: 'center',
     alignItems: 'center',
-    marginTop: 20,
+    gap: 6,
   },
   footerText: {
-    fontSize: 16,
-    color: theme.colors.textSecondary,
-  },
-  linkText: {
-    fontSize: 16,
-    color: theme.colors.primary,
-    fontWeight: '600',
-  },
-  backToWelcome: {
-    marginTop: 20,
-    alignItems: 'center',
-  },
-  backToWelcomeText: {
-    fontSize: 14,
     color: theme.colors.textSecondary,
   },
 });
 
-export default LoginScreen; 
+export default LoginScreen;
